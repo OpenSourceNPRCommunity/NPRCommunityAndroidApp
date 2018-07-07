@@ -1,10 +1,11 @@
 package com.nprcommunity.npronecommunity.Store;
 
+import com.nprcommunity.npronecommunity.Store.CacheStructures.BaseCache;
 import com.orhanobut.hawk.Hawk;
 
 public class JSONCache {
 
-    public static final Object lock = new Object();
+    private static final Object lock = new Object();
 
     /**
      * Getting an object thread safe.
@@ -23,8 +24,12 @@ public class JSONCache {
 
     public static void putObject(String key, BaseCache baseCache) {
         synchronized (lock) {
+            BaseCache tmpBaseCache;
             if (Hawk.contains(key)) {
-                baseCache = Hawk.get(key);
+                tmpBaseCache = Hawk.get(key);
+                if (tmpBaseCache != null) {
+                    baseCache.setOriginalDate(tmpBaseCache.getOriginalDate());
+                }
             }
             baseCache.updateLastUpdated();
             Hawk.put(key, baseCache);

@@ -1,12 +1,10 @@
-package com.nprcommunity.npronecommunity.Store;
-
-import com.nprcommunity.npronecommunity.API.Recommendations;
+package com.nprcommunity.npronecommunity.Store.CacheStructures;
 
 import java.util.Date;
 
 public abstract class BaseCache<T> {
-    public final Date originalDate;
-    private Date lastUpdatedDate;
+    protected Date originalDate;
+    protected Date lastUpdatedDate;
     public final String urlParent;
     public final T data;
 
@@ -19,5 +17,14 @@ public abstract class BaseCache<T> {
 
     public void updateLastUpdated() {
         this.lastUpdatedDate = new Date();
+    }
+    public void setOriginalDate(Date originalDate) { this.originalDate = originalDate; };
+
+    public Date getOriginalDate() {
+        return  originalDate;
+    }
+
+    public boolean isExpired() {
+        return false;
     }
 }

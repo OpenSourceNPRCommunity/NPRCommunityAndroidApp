@@ -1,29 +1,51 @@
 package com.nprcommunity.npronecommunity.Background.Queue;
 
-import java.util.List;
+import com.nprcommunity.npronecommunity.API.APIRecommendations;
+
+import java.util.ArrayList;
 
 public interface AudioQueue {
     /**
-     * Return true if url was found and removed. Else false.
-     * @param url String url
-     * @return whether removed or not
+     * Return number of values removed
+     * @param itemURL url of the item
+     * @return number of values removed
      */
-    public boolean removeURL(String url);
+    public void removeQueueItem(String itemURL);
 
     /**
      * Returns the head of the queue
      */
-    public String peek();
+    public APIRecommendations.ItemJSON peek();
 
     /**
-     * Add a url
+     * Add a queue item
      * @return adding the url was successful
      */
-    public boolean addURL(String url);
+    public boolean addQueueItem(APIRecommendations.ItemJSON queueItem);
 
     /**
-     * Gets the current queue list
+     * Gets a copy of the current queue list
      * @return list of urls for the current queue
      */
-    public List<String> getQueue();
+    public ArrayList<APIRecommendations.ItemJSON> getQueue();
+
+    public int size();
+
+    /**
+     * Will not throw index out of bound exception, instead
+     * insert at end if > array.length
+     * insert at begining if < 0
+     * @param index
+     * @param queueItem
+     * @return
+     */
+    public boolean addQueueItem(int index, APIRecommendations.ItemJSON queueItem);
+
+    public void removeQueueItem(int position);
+
+    public void swapQueueItem(int fromPosition, int toPosition);
+
+    public APIRecommendations.ItemJSON getQueueItem(int position);
+
+    public void forceSaveQueue();
 }

@@ -1,89 +1,105 @@
 package com.nprcommunity.npronecommunity.Layout.Fragment;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
+import com.nprcommunity.npronecommunity.Layout.Adapter.ContentQueueRecyclerViewAdapter;
+import com.nprcommunity.npronecommunity.Layout.Callback.ContentQueueCallback;
+import com.nprcommunity.npronecommunity.Layout.Callback.ContentQueuePlayingListener;
 import com.nprcommunity.npronecommunity.R;
-
+import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
 /**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link ContentQueueFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link ContentQueueFragment#newInstance} factory method to
- * create an instance of this fragment.
+ * A fragment representing a list of Items.
+ * <p/>
+ * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
+ * interface.
  */
 public class ContentQueueFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
-
-    private OnFragmentInteractionListener mListener;
-
-    public ContentQueueFragment() {
-        // Required empty public constructor
-    }
+    private OnListFragmentInteractionListener mListener;
+    private RecyclerView recyclerView;
+    private ContentQueuePlayingListener contentQueuePlayingListener;
 
     /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment ContentQueueFragment.
+     * Mandatory empty constructor for the fragment manager to instantiate the
+     * fragment (e.g. upon screen orientation changes).
      */
-    // TODO: Rename and change types and number of parameters
-    public static ContentQueueFragment newInstance(String param1, String param2) {
+    public ContentQueueFragment() {}
+
+    public static ContentQueueFragment newInstance(ContentQueuePlayingListener listener) {
         ContentQueueFragment fragment = new ContentQueueFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
+        fragment.contentQueuePlayingListener = listener;
         return fragment;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+//            mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);
         }
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.content_queue_fragment, container, false);
+        View view = inflater.inflate(R.layout.content_queue_fragment_list, container, false);
+
+        // Set the adapter
+        if (view instanceof RecyclerView) {
+            Context context = view.getContext();
+            recyclerView = (RecyclerView) view;
+            recyclerView.setLayoutManager(new LinearLayoutManager(context));
+
+            //Setup the drag callback and movable
+            ContentQueueRecyclerViewAdapter contentQueueRecyclerViewAdapter =
+                    new ContentQueueRecyclerViewAdapter(
+                            mListener,
+                            contentQueuePlayingListener,
+                            context,
+                            ContentQueueFragment.this.getActivity()
+                    );
+
+            SettingsAndTokenManager settingsAndTokenManager;
+            boolean swipeEnabled = false;
+            if (this.getContext() != null) {
+                    settingsAndTokenManager = new SettingsAndTokenManager(this.getContext());
+                    swipeEnabled = settingsAndTokenManager.getConfigBoolean(
+                            SettingsAndTokenManager.SettingsKey.SWIPE_REMOVE_ENABLED,
+                            false
+                    );
+            }
+            ItemTouchHelper.Callback callback =
+                    new ContentQueueCallback(contentQueueRecyclerViewAdapter, swipeEnabled);
+            ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
+            touchHelper.attachToRecyclerView(recyclerView);
+
+            recyclerView.setAdapter(contentQueueRecyclerViewAdapter);
+        }
+        return view;
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
-    }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
+        if (context instanceof OnListFragmentInteractionListener) {
+            mListener = (OnListFragmentInteractionListener) context;
         } else {
             throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
+                    + " must implement OnListFragmentInteractionListener");
         }
     }
 
@@ -93,18 +109,39 @@ public class ContentQueueFragment extends Fragment {
         mListener = null;
     }
 
+    public View getView(int position) {
+        return recyclerView.getLayoutManager().findViewByPosition(position);
+    }
+
+    public View getView(String href) {
+        for (int i = 0; i < recyclerView.getAdapter().getItemCount(); i++) {
+            View tmpView = recyclerView.getLayoutManager().findViewByPosition(i);
+            if (tmpView != null) {
+                TextView titleTextView = tmpView.findViewById(R.id.queue_rec_href);
+                if (titleTextView != null && titleTextView.getText().equals(href)) {
+                    return tmpView;
+                }
+            }
+        }
+        return null;
+    }
+
+    public RecyclerView.Adapter getQueueAdapter() {
+        return recyclerView.getAdapter();
+    }
+
     /**
      * This interface must be implemented by activities that contain this
      * fragment to allow an interaction in this fragment to be communicated
      * to the activity and potentially other fragments contained in that
      * activity.
-     * <p>
+     * <p/>
      * See the Android Training lesson <a href=
      * "http://developer.android.com/training/basics/fragments/communicating.html"
      * >Communicating with Other Fragments</a> for more information.
      */
-    public interface OnFragmentInteractionListener {
+    public interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
+        void onListFragmentInteraction(String queueItemURL);
     }
 }

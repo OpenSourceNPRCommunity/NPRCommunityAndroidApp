@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/content_media_player_fragment"
+    android:layout_gravity="top"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".Layout.Fragment.ContentQueueFragment">
-
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
-
+    android:layout_height="0dp"
+    android:layout_weight="5"
+    tools:context=".Layout.Fragment.ContentMediaPlayerFragment"
+    android:visibility="gone">
 </FrameLayout>

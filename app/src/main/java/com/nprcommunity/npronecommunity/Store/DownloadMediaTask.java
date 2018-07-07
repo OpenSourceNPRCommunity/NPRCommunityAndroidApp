@@ -1,7 +1,6 @@
 package com.nprcommunity.npronecommunity.Store;
 
 import android.content.Context;
-import android.os.AsyncTask;
 import android.util.Log;
 
 import java.io.FileInputStream;
@@ -9,51 +8,83 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.util.List;
 
-public class DownloadMediaTask extends AsyncTask<String, Void, FileInputStream> {
+public class DownloadMediaTask implements Runnable{
+
     private String TAG = "STORE.DOWNLOADMEDIATASK";
-
     private FileCache.Type type;
-
     private CacheResponse cacheResponse;
-
     private final WeakReference<Context> weakContext;
+    private String url = null;
+    private ProgressCallback progressCallback;
+    private Boolean stopDownload = Boolean.FALSE;
 
-    public DownloadMediaTask(Context weakContext, FileCache.Type type, CacheResponse cacheResponse) {
+    protected DownloadMediaTask(Context weakContext,
+                                FileCache.Type type,
+                                CacheResponse cacheResponse,
+                                String url,
+                                ProgressCallback progressCallback) {
         this.type = type;
         this.cacheResponse = cacheResponse;
         this.weakContext = new WeakReference<>(weakContext);
+        this.url = url;
+        this.progressCallback = progressCallback;
     }
 
-    protected FileInputStream doInBackground(String... urls) {
+    public void stopDownload() {
+        stopDownload = Boolean.TRUE;
+    }
+
+    @Override
+    public void run() {
+        cacheResponse.executeFunc(getFileInputStream(), url);
+    }
+
+    private FileInputStream getFileInputStream() {
         Context context = weakContext.get();
         if(context == null) {
             Log.e(TAG, "doInBackground: activity is null");
             return null;
         }
-        String url = urls[0];
         FileCache cache = FileCache.getInstances(context);
         FileInputStream cacheInputStream = null;
-        boolean fileExists = cache.fileExists(url, FileCache.Type.IMAGE, context);
+        boolean fileExists = cache.fileExists(url, type);
         if(!fileExists) {
             // file does not exist
+            URLConnection urlConnection;
             InputStream urlInputStream = null;
+            int total = 0;
             try {
-                //get url data
-                urlInputStream = new URL(url).openStream();
+                //get url data //TODO add in check for get the url to add header if its to npr
+                urlConnection = new URL(url).openConnection();
+                List<String> contentLength = urlConnection.getHeaderFields().get("content-Length");
+                if (contentLength != null && contentLength.size() > 0) {
+                    try {
+                        total = Integer.parseInt(contentLength.get(0));
+                    } catch (NumberFormatException e) {
+                        total = -1;
+                    }
+                }
+                urlInputStream = urlConnection.getInputStream();
+            } catch (MalformedURLException e) {
+                Log.e(TAG, "doInBackground: malformed url stream [" + url + "] type [" +
+                        type.name() + "]", e);
+                return null;
             } catch (IOException e) {
                 Log.e(TAG, "doInBackground: url stream", e);
+                return null;
             }
             try {
                 //save file to correct type
-                cacheInputStream = cache.saveFile(url, urlInputStream, type, context);
+                cacheInputStream = cache.saveFile(url, urlInputStream, type, context,
+                        progressCallback, total, stopDownload);
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "doInBackground: save file", e);
-            }
-            if(cacheInputStream == null) {
-                //if saving the file failed, will return null InputStream
-                Log.e(TAG, "doInBackground: cacheInputStream failed");
+                return null;
             }
         } else {
             //get CacheInputStream
@@ -62,12 +93,9 @@ public class DownloadMediaTask extends AsyncTask<String, Void, FileInputStream> 
             } catch (FileNotFoundException e) {
                 //failed to find file: should not happen
                 Log.e(TAG, "doInBackground: failed to get data although exists", e);
+                return null;
             }
         }
         return cacheInputStream;
-    }
-
-    protected void onPostExecute(FileInputStream fileInputStream) {
-       cacheResponse.executeFunc(fileInputStream);
     }
 }

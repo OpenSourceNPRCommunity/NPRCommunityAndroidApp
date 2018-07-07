@@ -1,9 +1,8 @@
 package com.nprcommunity.npronecommunity.Layout.Adapter;
 
+import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -13,23 +12,30 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.nprcommunity.npronecommunity.API.Recommendations;
+import com.nprcommunity.npronecommunity.API.APIRecommendations;
+import com.nprcommunity.npronecommunity.API.APIAggregations;
+import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
+import com.nprcommunity.npronecommunity.Layout.Fragment.TileDialogFragment;
 import com.nprcommunity.npronecommunity.R;
+import com.nprcommunity.npronecommunity.Store.CacheStructures.AggregationsCache;
 import com.nprcommunity.npronecommunity.Store.FileCache;
-import com.nprcommunity.npronecommunity.Store.DownloadMediaTask;
 
+import java.io.FileInputStream;
 import java.util.List;
 
 public class RecommendationsAdapter extends RecyclerView.Adapter<RecommendationsAdapter.ViewHolder> {
     private String TAG = "RecommendationsAdapter";
-    private List<Recommendations.ItemJSON> itemsJSON;
+    private List<APIRecommendations.ItemJSON> itemsJSON;
     private Context context;
-    private int IMAGE_WIDTH = 120,
-                    IMAGE_HEIGHT = 120;
+    private Activity activity;
+    private BackgroundAudioService backgroundAudioService;
 
-    public RecommendationsAdapter(List<Recommendations.ItemJSON> itemsJSON, Context context) {
+    public RecommendationsAdapter(List<APIRecommendations.ItemJSON> itemsJSON, Activity activity,
+                                  BackgroundAudioService backgroundAudioService) {
         this.itemsJSON = itemsJSON;
-        this.context = context;
+        this.context = activity.getApplicationContext();
+        this.activity = activity;
+        this.backgroundAudioService = backgroundAudioService;
     }
 
     @NonNull
@@ -42,39 +48,81 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Recommendations.ItemJSON itemJSON = itemsJSON.get(position);
-        String text = "";
-        if(itemJSON.attributes == null) {
-            //TODO change error message
-            text = "Error Loading: Contact Support";
-        } else {
-            text = itemJSON.attributes.title;
-        }
-        holder.textView.setText(text);
-        if(itemJSON.links == null || itemJSON.links.image == null || itemJSON.links.image.size() == 0) {
-            //TODO error image
-            Log.e(TAG, String.format("onBindViewHolder: error href: %s", itemJSON.href));
-            holder.imageView.setBackgroundColor(Color.BLACK);
-        } else {
-            new DownloadMediaTask(context,
-                    FileCache.Type.IMAGE,
-                    (fileInputStream)->{
-                        if(fileInputStream == null) {
-                            //failed to get data, use default image
-                            //TODO default image place here
-                            Log.e(TAG,
-                                    String.format("onBindViewHolder: error loading: %s",
-                                            itemJSON.links.image.get(0).href));
-                            holder.imageView.setBackgroundColor(Color.BLACK);
+        APIRecommendations.ItemJSON itemJSON = itemsJSON.get(position);
+
+        holder.view.setOnClickListener((View view) -> {
+            Log.i(TAG, "onCreateViewHolder: selected:" + itemJSON.attributes.type);
+
+            if (itemJSON.attributes.rating.hasAffiliations()) {
+                //has affiliations load it
+                APIAggregations APIAggregations = new APIAggregations(
+                    context,
+                    itemJSON.attributes.rating.getAffiliations().get(0)
+                );
+
+                //get aggregation data for creating the display
+                APIAggregations.updateData(() -> {
+                    AggregationsCache aggregationsData = APIAggregations.getData();
+                    if (aggregationsData == null || aggregationsData.data == null) {
+                        Log.e(TAG, "onBindViewHolder: APIAggregations data is null");
+                        //todo display error with toast
+                    } else {
+                        Log.d(TAG, "onBindViewHolder: APIAggregations got data!");
+
+                        //create dialog to add audio
+                        TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(
+                                itemJSON,
+                                backgroundAudioService,
+                                aggregationsData.data
+                        );
+                        if (tileDialogFragment == null) {
+                            Log.e(TAG, "onBindViewHolder: error null");
+                            //TODO make toast or something or error
                         } else {
-                            holder.imageView.setImageBitmap(
-                                    Bitmap.createScaledBitmap(BitmapFactory.decodeStream(fileInputStream),
-                                            IMAGE_WIDTH,
-                                            IMAGE_HEIGHT,
-                                            false)
-                            );
+                            tileDialogFragment.show(activity.getFragmentManager(), "tiledialog");
                         }
-                    }).execute(itemJSON.links.image.get(0).href);
+                    }
+                });
+            } else {
+                //create dialog to add audio
+                TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(
+                        itemJSON,
+                        backgroundAudioService,
+                        null);
+                tileDialogFragment.show(activity.getFragmentManager(), "tiledialog");
+            }
+        });
+
+        holder.textView.setText(itemJSON.attributes.title);
+
+        holder.imageView.setImageResource(R.drawable.blank_image);
+
+        if (itemJSON.links.hasImage()) {
+            //only run if has an image
+            FileCache fileCache = FileCache.getInstances(this.context);
+            // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
+            fileCache.getImage(
+                    itemJSON.links.getValidImage().href,
+                    context,
+                    (FileInputStream fileInputStream, String url) -> {
+                        if (fileInputStream == null) {
+                            Log.e(TAG, "onBindViewHolder: failed to get image. Check out other logs");
+                        } else {
+                            activity.runOnUiThread(() -> {
+                                holder.imageView.setImageBitmap(
+                                        BitmapFactory.decodeStream(fileInputStream)
+                                );
+                            });
+                        }
+                    },
+                    (int progress, int total, int speed) -> {
+                        //this is progress for image loading for recommendation
+                        Log.d(TAG, "onBindViewHolder: progress loading recommendation image: "
+                            + itemJSON.links.getValidImage().href + " at "
+                            + " progress [" + progress + "] total [" + total + "] "
+                            + " percent [" + ((double)progress)/((double)total));
+                    }
+            );
         }
     }
 
@@ -85,13 +133,15 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
-        public TextView textView;
-        public ImageView imageView;
+        public final TextView textView;
+        public final ImageView imageView;
+        public final View view;
 
         public ViewHolder(View view) {
             super(view);
-            textView = view.findViewById(R.id.text_view);
-            imageView = view.findViewById(R.id.image_view);
+            this.view = view;
+            textView = view.findViewById(R.id.recommendation_tile_text_view);
+            imageView = view.findViewById(R.id.recommendation_tile_image_view);
         }
     }
 }

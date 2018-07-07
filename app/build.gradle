@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 28
     defaultConfig {
         applicationId "com.nprcommunity.npronecommunity"
         minSdkVersion 21
@@ -12,10 +12,23 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFile 'proguard-google-api-client.txt'
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            debuggable true
+        }
+
+        debugRelease {
+            applicationIdSuffix ".debugRelease"
+            versionNameSuffix "-debugRelease"
+            debuggable false
+        }
+
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -37,14 +50,14 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.orhanobut:hawk:2.0.1'
-//    implementation 'io.requery:requery:1.5.1'
-//    implementation 'io.requery:requery-android:1.5.1'
-//    implementation 'com.squareup.okhttp3:okhttp-urlconnection:3.10.0'
-//    implementation 'com.squareup.picasso:picasso:2.71828'
-//    implementation 'com.nytimes.android:cache3:3.0.1'
-//    implementation 'com.nytimes.android:store3:3.0.1'
-//    implementation 'com.nytimes.android:store-kotlin3:3.0.1'
-//    implementation 'com.nytimes.android:middleware3:3.0.1'
-//    implementation 'com.nytimes.android:filesystem3:3.0.1'
-//    implementation 'io.paperdb:paperdb:2.6'
+    //    implementation 'io.requery:requery:1.5.1'
+    //    implementation 'io.requery:requery-android:1.5.1'
+    //    implementation 'com.squareup.okhttp3:okhttp-urlconnection:3.10.0'
+    //    implementation 'com.squareup.picasso:picasso:2.71828'
+    //    implementation 'com.nytimes.android:cache3:3.0.1'
+    //    implementation 'com.nytimes.android:store3:3.0.1'
+    //    implementation 'com.nytimes.android:store-kotlin3:3.0.1'
+    //    implementation 'com.nytimes.android:middleware3:3.0.1'
+    //    implementation 'com.nytimes.android:filesystem3:3.0.1'
+    //    implementation 'io.paperdb:paperdb:2.6'
 }

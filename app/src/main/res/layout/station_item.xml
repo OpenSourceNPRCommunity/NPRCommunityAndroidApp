@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center_horizontal">
+
+    <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#ffffff"
+        android:layout_margin="10dp"
+        android:elevation="1dp"
+        android:translationZ="3dp"
+        android:layout_gravity="center_horizontal">
+        <!--Set elevation is above in the margin-->
+
+        <ImageView
+            android:id="@+id/station_image_view"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/station_image_height"
+            android:adjustViewBounds="true"/>
+
+        <TextView
+            android:id="@+id/station_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_gravity="center" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -4,21 +4,27 @@
     android:orientation="vertical"
     android:layout_width="wrap_content"
     android:layout_height="match_parent"
-    android:padding="10dp">
+    android:background="#ffffff"
+    android:layout_margin="10dp"
+    android:elevation="1dp"
+    android:translationZ="3dp">
+    <!--Set elevation is above in the margin-->
 
     <ImageView
-        android:id="@+id/image_view"
-        android:layout_width="@dimen/tile_image_width"
+        android:id="@+id/recommendation_tile_image_view"
+        android:layout_width="wrap_content"
         android:layout_height="@dimen/tile_image_height"
         android:layout_margin="@dimen/tile_padding"
-        android:scaleType="fitXY"/>
+        android:adjustViewBounds="true"/>
 
     <TextView
-        android:id="@+id/text_view"
+        android:id="@+id/recommendation_tile_text_view"
         android:layout_width="@dimen/tile_image_width"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/tile_padding"
         android:gravity="center"
-        android:maxLines="2"/>
+        android:maxLines="2"
+        android:layout_gravity="center"
+        android:ellipsize="end" />
 
 </LinearLayout>

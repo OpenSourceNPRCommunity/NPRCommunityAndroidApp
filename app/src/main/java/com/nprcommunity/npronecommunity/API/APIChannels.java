@@ -3,25 +3,40 @@ package com.nprcommunity.npronecommunity.API;
 import android.content.Context;
 import android.util.Log;
 
-import com.nprcommunity.npronecommunity.Store.BaseCache;
-import com.nprcommunity.npronecommunity.Store.ChannelCache;
-import com.nprcommunity.npronecommunity.Store.RecommendationCache;
+import com.nprcommunity.npronecommunity.Store.CacheStructures.ChannelCache;
 import com.nprcommunity.npronecommunity.Store.JSONCache;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class Channels extends API {
+public class APIChannels extends API {
     private static String TAG = "API.CHANNELS";
+    public static final String DEFAULT_CHANNELS_URL = "https://listening.api.npr.org/v2/channels";
 
-    public Channels(Context context) {
-        super(context);
-        URL = "https://listening.api.npr.org/v2/channels";
+    public static final Map<String, Boolean> DEFAULT_CHANNELS_MAP = getDefaultChannels();
+
+    private static Map<String, Boolean> getDefaultChannels() {
+        //Values do not matter, will only be checking if keys exist
+        Map<String, Boolean> result = new HashMap<String, Boolean>();
+        result.put("followed", Boolean.TRUE);
+        result.put("history", Boolean.TRUE);
+        result.put("newscasts", Boolean.TRUE);
+        result.put("recommended", Boolean.TRUE);
+        result.put("shows", Boolean.TRUE);
+        return Collections.unmodifiableMap(result);
     }
 
-    public Channels(Context context, String urlParent) {
+    public APIChannels(Context context) {
+        super(context);
+        URL = DEFAULT_CHANNELS_URL;
+    }
+
+    public APIChannels(Context context, String urlParent) {
         super(context);
         URL = urlParent;
     }
@@ -57,6 +72,9 @@ public class Channels extends API {
         public String version,
                 href;
         public AttributesJSON attributes;
+
+        //custom attribute used later on for is selected
+        public boolean isChecked;
     }
 
     public static class AttributesJSON {

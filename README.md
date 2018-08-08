@@ -79,7 +79,7 @@ Immediate Goals:
     - [ ] Add in option to search for more if a show/channel pops up
 
 - Config
-    - [X] Setup env vars for config or something like that
+    - [X] Setup env vars for config or something like that 
     
 - Rating
     - Start - send update after 5 minutes https://dev.npr.org/guide/services/listening/#Ratings 

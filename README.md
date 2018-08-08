@@ -33,7 +33,7 @@ Immediate Goals:
 - [X] Select Station
 - [X] Sponsorship disable skipping
 - [X] Logout
-- Images - load the most direct image for each icon
+- Images delete old version with job scheduler
 - Debug Version Check option
 
 ### Long Term not as important goals, but have been on my mind...
@@ -79,7 +79,7 @@ Immediate Goals:
     - [ ] Add in option to search for more if a show/channel pops up
 
 - Config
-    - [ ] Setup env vars for config or something like that
+    - [X] Setup env vars for config or something like that
     
 - Rating
     - Start - send update after 5 minutes https://dev.npr.org/guide/services/listening/#Ratings 

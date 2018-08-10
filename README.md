@@ -34,7 +34,9 @@ Immediate Goals:
 - [X] Sponsorship disable skipping
 - [X] Logout
 - Images delete old version with job scheduler
-- Debug Version Check option
+- [X] Debug Version Check option
+- Add time and date of podcast to queue and fragment info
+- Add size of file to queue
 
 ### Long Term not as important goals, but have been on my mind...
 

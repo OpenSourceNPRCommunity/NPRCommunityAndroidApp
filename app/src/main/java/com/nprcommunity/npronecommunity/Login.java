@@ -65,7 +65,7 @@ public class Login extends AppCompatActivity {
 
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
-                if(errorResponse.getStatusCode() == 404 && request.getUrl().toString().equals(Config.OATH_URL)) {
+                if(errorResponse.getStatusCode() == 418 && request.getUrl().toString().equals(Config.OATH_URL)) {
                     SettingsAndTokenManager tokenManager = new SettingsAndTokenManager(Login.this);
                     tokenManager.setToken(errorResponse.getResponseHeaders().get("x-forwarded-access-token"));
                     Intent i = new Intent(Login.this, Navigate.class);
@@ -75,23 +75,15 @@ public class Login extends AppCompatActivity {
                 super.onReceivedHttpError(view, request, errorResponse);
             }
         });
-        myWebView.loadUrl(Config.LOGIN_URL);
+        String params = "rd=/oauth2/success-418";
+        myWebView.postUrl(Config.LOGIN_URL, params.getBytes());
     }
 
     private boolean hasValidToken() {
         SettingsAndTokenManager tokenManager = new SettingsAndTokenManager(this);
-//            WebView Handles removing expired cookies automatically API level 21, so just check if cookie exists
         if(tokenManager.getToken() != null && CookieManager.getInstance().getCookie(URL) != null) {
             return true;
         }
         return false;
-//        CookieManager
-//        String cookieString = CookieManager.getInstance().getCookie("https://npr.jessesaran.com");
-//        Log.d(TAG, "COOKIES FROM npr.jessesaran.com: " + cookieString);
-//        CookieManager cookieManager = CookieManager.getInstance();
-//        cookieManager.setCookie("https://npr.jessesaran.com", "_oauth2_proxy=");
-//        cookieManager.flush();
-//        cookieString = CookieManager.getInstance().getCookie("https://npr.jessesaran.com");
-//        Log.d(TAG, "COOKIES FROM npr.jessesaran.com: " + cookieString);
     }
 }

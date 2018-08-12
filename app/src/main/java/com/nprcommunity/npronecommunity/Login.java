@@ -17,9 +17,6 @@ public class Login extends AppCompatActivity {
     private String TAG = "LOGIN",
                     URL = Config.OATH_URL;
 
-    public static final int REQUEST_CODE = 0,
-                            RESULT_CODE_OK = 1;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -30,20 +27,11 @@ public class Login extends AppCompatActivity {
 
         if(hasValidToken()) {
             Intent i = new Intent(Login.this, Navigate.class);
-            startActivityForResult(i, REQUEST_CODE);
+            startActivity(i);
             return;
         }
 
         setUpWebLogin();
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE) {
-            if (resultCode == RESULT_CODE_OK) {
-                setUpWebLogin();
-            }
-        }
     }
 
     private void setUpWebLogin() {
@@ -57,7 +45,8 @@ public class Login extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if(request != null && request.getRequestHeaders() != null && request.getRequestHeaders().containsKey("X-Forwarded-Access-Token")) {
                     Intent i = new Intent(Login.this, Navigate.class);
-                    startActivityForResult(i, REQUEST_CODE);
+                    startActivity(i);
+                    finish();
                     return true;
                 }
                 return false;
@@ -69,7 +58,8 @@ public class Login extends AppCompatActivity {
                     SettingsAndTokenManager tokenManager = new SettingsAndTokenManager(Login.this);
                     tokenManager.setToken(errorResponse.getResponseHeaders().get("x-forwarded-access-token"));
                     Intent i = new Intent(Login.this, Navigate.class);
-                    startActivityForResult(i, REQUEST_CODE);
+                    startActivity(i);
+                    finish();
                     return;
                 }
                 super.onReceivedHttpError(view, request, errorResponse);

@@ -277,7 +277,8 @@ public class Navigate extends AppCompatActivity
             settingsAndTokenManager.deleteToken();
             //remove cookies
             CookieManager.getInstance().removeAllCookies(null);
-            setResult(Login.RESULT_CODE_OK);
+            Intent i = new Intent(Navigate.this, Login.class);
+            startActivity(i);
             finish();
         }
 

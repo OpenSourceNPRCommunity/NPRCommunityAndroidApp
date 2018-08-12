@@ -37,6 +37,7 @@ Immediate Goals:
 - [X] Debug Version Check option
 - Add time and date of podcast to queue and fragment info
 - Add size of file to queue
+- Check for internet and timeout, display errors for HTTP Calls
 
 ### Long Term not as important goals, but have been on my mind...
 

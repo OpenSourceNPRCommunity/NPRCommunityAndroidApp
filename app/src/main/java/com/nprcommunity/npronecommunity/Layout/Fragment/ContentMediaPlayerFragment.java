@@ -158,7 +158,6 @@ public class ContentMediaPlayerFragment extends Fragment {
         if (!imageJSON.isImageDrawable()) {
             fileCache.getImage(
                     imageJSON.href,
-                    this.getContext(),
                     (FileInputStream fileInputStream, String url) -> {
                         if (fileInputStream == null) {
                             //TODO: put up blank image

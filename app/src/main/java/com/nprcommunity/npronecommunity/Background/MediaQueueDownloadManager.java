@@ -127,7 +127,6 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
         DownloadMediaTask downloadMediaTask = fileCache.getAudio(
                 audioJSON.href,
                 !audioJSON.progressTracker.isFullyDownloaded(),
-                context,
                 (FileInputStream fileInputStream, String url) -> {
                     if (fileInputStream == null) {
                         //something failed set full downloaded to false

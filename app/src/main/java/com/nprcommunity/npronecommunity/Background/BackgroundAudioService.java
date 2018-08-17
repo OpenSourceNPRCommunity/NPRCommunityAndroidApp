@@ -145,7 +145,9 @@ public class BackgroundAudioService extends Service implements
     @Override
     public void onCreate() {
         //Init Hawk
-        Hawk.init(getApplicationContext()).build();
+        if (!Hawk.isBuilt()) {
+            Hawk.init(getApplicationContext()).build();
+        }
 
         //Setup Media Player
         mediaPlayer = new MediaPlayer();

@@ -103,7 +103,6 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
             fileCache.getImage(
                     itemJSON.links.getValidImage().href,
-                    context,
                     (FileInputStream fileInputStream, String url) -> {
                         if (fileInputStream == null) {
                             Log.e(TAG, "onBindViewHolder: failed to get image. Check out other logs");

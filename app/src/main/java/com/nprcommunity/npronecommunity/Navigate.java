@@ -1,6 +1,5 @@
 package com.nprcommunity.npronecommunity;
 
-import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -15,7 +14,6 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
@@ -37,6 +35,7 @@ import com.nprcommunity.npronecommunity.Layout.Fragment.ContentMediaPlayerFragme
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentViewPagerFragmentHolder;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
+import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
 import java.util.Observer;
@@ -86,14 +85,30 @@ public class Navigate extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
-
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close) {
+            public void onDrawerOpened(View drawerView) {
+                super.onDrawerOpened(drawerView);
+                //update the file usage
+                FileCache fileCache = FileCache.getInstances(Navigate.this);
+                String imageSize = " " + Util.getBytesString((int)fileCache.getDirSize(FileCache.Type.IMAGE));
+                //image usage stat
+                navigationView.getMenu().findItem(R.id.nav_image_cache).setTitle(
+                    getString(R.string.nav_item_image_size) + imageSize
+                );
+                //audio usage stat
+                String audioSize = " " + Util.getBytesString((int)fileCache.getDirSize(FileCache.Type.AUDIO));
+                navigationView.getMenu().findItem(R.id.nav_audio_cache).setTitle(
+                        getString(R.string.nav_item_audio_size) + audioSize
+                );
+            }
+        };
+        drawer.addDrawerListener(toggle);
+        toggle.syncState();
 
         //setup auto play button action
         Switch autoPlayEnableSwitch = navigationView.getMenu().findItem(R.id.nav_auto_play)
@@ -130,6 +145,9 @@ public class Navigate extends AppCompatActivity
         //Sets the scrolling title for the song
         currentMediaTextView = findViewById(R.id.current_song_text);
         currentMediaTextView.setSelected(true);
+
+        //schedule the job
+        FileCache.createCacheJobService(this);
 
         // last thing should be to setup the server connection
         setServerConn();
@@ -301,6 +319,7 @@ public class Navigate extends AppCompatActivity
         backgroundAudioService.removeObserver(serviceObserver);
 
         unbindService(serverConn);
+        stopService(new Intent(this, BackgroundAudioService.class));
         super.onDestroy();
     }
 
@@ -516,7 +535,7 @@ public class Navigate extends AppCompatActivity
                         if (tmpView != null) {
                             if (downloadProgressInts[2] == 100) {
                                 //if percentage is 100
-                                String speed = Util.getBytesString(downloadProgressInts[1]);
+                                String speed = Util.getBytesPerSecString(downloadProgressInts[1]);
                                 tmpView.findViewById(R.id.queue_progress_speed)
                                         .setVisibility(View.GONE);
                                 String percent = "100% Downloaded";
@@ -527,7 +546,7 @@ public class Navigate extends AppCompatActivity
                                         .setVisibility(View.GONE);
                             } else {
                                 //when downloading update these views
-                                String speed = Util.getBytesString(downloadProgressInts[1]);
+                                String speed = Util.getBytesPerSecString(downloadProgressInts[1]);
                                 TextView progressSpeed = tmpView.findViewById(R.id.queue_progress_speed);
                                 progressSpeed.setText(
                                         speed

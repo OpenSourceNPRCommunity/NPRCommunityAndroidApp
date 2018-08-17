@@ -21,7 +21,7 @@ After that simply clone this repo and start messing around.
 I use a Samsung S8, so that is my targeted platform.
 
 ## In the works: Some thins I would like to do and are planning on doing
-
+__
 Overall Goals:
 - Refactoring a lot of the Code
 - Testing - I need to add it 
@@ -33,11 +33,15 @@ Immediate Goals:
 - [X] Select Station
 - [X] Sponsorship disable skipping
 - [X] Logout
-- Images delete old version with job scheduler
+- [X] Images delete old version with job scheduler
+    - [X] On Logout delete local content
 - [X] Debug Version Check option
 - Add time and date of podcast to queue and fragment info
 - Add size of file to queue
 - Check for internet and timeout, display errors for HTTP Calls
+- Disable sound if not already playing even though is open
+- Add in activity thing in dropdown
+- Add in activity thing on off screen
 
 ### Long Term not as important goals, but have been on my mind...
 

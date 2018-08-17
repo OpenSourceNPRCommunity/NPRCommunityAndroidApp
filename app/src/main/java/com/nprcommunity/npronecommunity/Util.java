@@ -57,15 +57,19 @@ public class Util {
     public static String getBytesString(int byteLength) {
         if (byteLength < 1000) {
             //B/s
-            return byteLength + " B/s";
+            return byteLength + " B";
         } else if (byteLength/1000 < 1000) {
             //KB/s
-            return String.format(Locale.US, "%.2f KB/s",
+            return String.format(Locale.US, "%.2f KB",
                     ((double)byteLength)/((double)1000));
         } else {
             //MB/s
-            return String.format(Locale.US, "%.2f MB/s",
+            return String.format(Locale.US, "%.2f MB",
                     ((double)byteLength)/((double)1000000));
         }
+    }
+
+    public static String getBytesPerSecString(int byteLength) {
+        return getBytesString(byteLength) + "/s";
     }
 }

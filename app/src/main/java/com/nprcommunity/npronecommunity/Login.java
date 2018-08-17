@@ -12,7 +12,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 
+import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
+import com.orhanobut.hawk.Hawk;
 
 public class Login extends AppCompatActivity {
 
@@ -39,6 +41,16 @@ public class Login extends AppCompatActivity {
     }
 
     private void setUpWebLogin() {
+        //assume the user is signed out or has never signed in
+
+        //delete any local cache
+        FileCache fileCache = FileCache.getInstances(this);
+        fileCache.deleteAllFiles();
+        if (!Hawk.isBuilt()) {
+            Hawk.init(getApplicationContext()).build();
+        }
+        Hawk.deleteAll();
+
         //Start Login WebView
         final WebView myWebView = findViewById(R.id.login_webview);
         //Enable javascript

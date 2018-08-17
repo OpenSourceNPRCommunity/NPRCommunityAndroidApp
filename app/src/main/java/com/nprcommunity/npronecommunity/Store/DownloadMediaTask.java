@@ -80,7 +80,7 @@ public class DownloadMediaTask implements Runnable{
             }
             try {
                 //save file to correct type
-                cacheInputStream = cache.saveFile(url, urlInputStream, type, context,
+                cacheInputStream = cache.saveFile(url, urlInputStream, type,
                         progressCallback, total, stopDownload);
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "doInBackground: save file", e);
@@ -89,7 +89,7 @@ public class DownloadMediaTask implements Runnable{
         } else {
             //get CacheInputStream
             try {
-                cacheInputStream = cache.getInputStream(url, type, context);
+                cacheInputStream = cache.getInputStream(url, type);
             } catch (FileNotFoundException e) {
                 //failed to find file: should not happen
                 Log.e(TAG, "doInBackground: failed to get data although exists", e);

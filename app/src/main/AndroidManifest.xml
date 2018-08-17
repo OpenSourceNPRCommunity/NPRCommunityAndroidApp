@@ -60,6 +60,12 @@
         </activity>
 
 
+        <service
+            android:name=".Store.CacheClearJobService"
+            android:label="Word service"
+            android:permission="android.permission.BIND_JOB_SERVICE" >
+        </service>
+
     </application>
 
 </manifest>

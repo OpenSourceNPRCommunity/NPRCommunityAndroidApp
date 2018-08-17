@@ -30,4 +30,6 @@
     <string name="nav_item_queue_swipe_remove">Queue Swipe Remove</string>
     <string name="nav_item_station">Change Station</string>
     <string name="nav_item_logout">Logout</string>
+    <string name="nav_item_image_size">Image Cache:</string>
+    <string name="nav_item_audio_size">Audios Cache:</string>
 </resources>

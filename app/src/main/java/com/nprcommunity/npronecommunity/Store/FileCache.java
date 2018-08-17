@@ -1,5 +1,8 @@
 package com.nprcommunity.npronecommunity.Store;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Base64;
@@ -9,16 +12,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Future;
 
 public class FileCache {
     private static FileCache fileCache;
@@ -27,6 +27,7 @@ public class FileCache {
                     IMAGE_PATH;
     public static final int MILLI_SECOND_IN_NANO = 1000000,
                         MILLI_NOTIFY = 750;
+    private Context context;
 
     public enum Type {
         IMAGE,
@@ -38,6 +39,7 @@ public class FileCache {
         setupPath(AUDIO_PATH);
         IMAGE_PATH = context.getFilesDir() + File.separator + "ImageFiles";
         setupPath(IMAGE_PATH);
+        this.context = context;
     }
 
     private void setupPath(String path) {
@@ -66,10 +68,20 @@ public class FileCache {
         return file.exists();
     }
 
+    public long getDirSize(Type type) {
+        long size = 0;
+        File[] files = getFiles(type);
+        for (File file: files) {
+            size += file.length();
+        }
+        return size;
+    }
+
     public File getFile(@NonNull String url,@NonNull Type type) {
         return new File(getFilePath(url, type));
     }
 
+    @Deprecated
     public List<List<String>> getFiles() {
         List<List<String>> arrayLists = new ArrayList<>(2);
         File dir = new File(IMAGE_PATH);
@@ -77,6 +89,19 @@ public class FileCache {
         dir = new File(AUDIO_PATH);
         arrayLists.add(Arrays.asList(dir.list()));
         return arrayLists;
+    }
+
+    public File[] getFiles(Type type) {
+        File dir = null;
+        switch (type) {
+            case IMAGE:
+                dir = new File(IMAGE_PATH);
+                break;
+            case AUDIO:
+                dir = new File(AUDIO_PATH);
+                break;
+        }
+        return dir.listFiles();
     }
 
     private String getFilePath(@NonNull String filename,@NonNull Type type) {
@@ -108,13 +133,19 @@ public class FileCache {
         return path;
     }
 
-    public void getImage(String filename, Context context, CacheResponse cacheResponse,
+    public void getImage(String filename, CacheResponse cacheResponse,
                          ProgressCallback progressCallback) {
         String path = getFilePath(filename, Type.IMAGE);
         if(fileExists(filename, Type.IMAGE)) {
             //The file exists load in the audio
             try {
                 File file = new File(path);
+                if (file.exists()) {
+                    //gets the last time
+                    if(!file.setLastModified((new Date()).getTime())) {
+                        Log.d(TAG, "getImage: failed to set last modified: " + filename);
+                    }
+                }
                 FileInputStream in = new FileInputStream(file);
                 cacheResponse.executeFunc(in, filename);
             } catch (FileNotFoundException e) {
@@ -132,7 +163,7 @@ public class FileCache {
     }
 
     public DownloadMediaTask getAudio(String filename, boolean forceRedownload,
-                           Context context, CacheResponse cacheResponse,
+                           CacheResponse cacheResponse,
                            ProgressCallback progressCallback) {
         String path = getFilePath(filename, Type.AUDIO);
         if(!forceRedownload && fileExists(filename, Type.AUDIO)) {
@@ -156,17 +187,32 @@ public class FileCache {
         return null;
     }
 
-    public FileInputStream getInputStream(String filename, Type type, Context context) throws FileNotFoundException {
+    public FileInputStream getInputStream(String filename, Type type) throws FileNotFoundException {
         String path = getFilePath(filename, type);
         File file = new File(path);
         return new FileInputStream(file);
+    }
+
+    public void deleteAllFiles() {
+        File[] files = getFiles(Type.IMAGE);
+        for (File file: files) {
+            if (!file.delete()) {
+                Log.e(TAG, "deleteAllFiles: failed to delete image: " + file.getName());
+            }
+        }
+        files = getFiles(Type.AUDIO);
+        for (File file: files) {
+            if (!file.delete()) {
+                Log.e(TAG, "deleteAllFiles: failed to delete audio: " + file.getName());
+            }
+        }
     }
 
     public boolean deleteFileIfExists(String filename, Type type) {
         if (fileExists(filename, type)) {
             String path = getFilePath(filename, type);
             File file = new File(path);
-            //todo maybe race condition for deleting file, downloading....
+            //todo maybe race condition for deleting file, downloading....will have to do this in other places
             return file.delete();
         }
         return true;
@@ -175,7 +221,6 @@ public class FileCache {
     public FileInputStream saveFile(String filename,
                                     InputStream inputStream,
                                     Type type,
-                                    Context context,
                                     ProgressCallback progressCallback,
                                     int total,
                                     Boolean stopDownload) throws FileNotFoundException {
@@ -224,6 +269,43 @@ public class FileCache {
             Log.e(TAG, "saveFile: outputstream filename:" + filename, e);
             return null;
         }
-        return getInputStream(filename, type, context);
+        return getInputStream(filename, type);
+    }
+
+    public static void createCacheJobService(Context context) {
+        JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        //only schedule the job if it is not pending
+        if (jobScheduler != null) {
+            boolean hasBeenScheduled = false;
+            for (JobInfo jobInfo : jobScheduler.getAllPendingJobs() ) {
+                if (jobInfo.getId() == CacheClearJobService.JOB_ID) {
+                    hasBeenScheduled = true;
+                    break;
+                }
+            }
+            if (!hasBeenScheduled) {
+                jobScheduler.schedule(createJobBuilder(context).build());
+            }
+        }
+    }
+
+    public static void setUpCacheJobService(Context context) {
+        JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        //only schedule the job if it is not pending
+        if (jobScheduler != null) {
+            jobScheduler.schedule(createJobBuilder(context).build());
+        }
+    }
+
+    private static JobInfo.Builder createJobBuilder(Context context) {
+        ComponentName serviceComponent = new ComponentName(context, CacheClearJobService.class);
+        JobInfo.Builder builder = new JobInfo.Builder(
+                CacheClearJobService.JOB_ID,
+                serviceComponent
+        );
+        builder.setRequiresDeviceIdle(true);
+        builder.setRequiresCharging(false);
+        builder.setPeriodic(8 * 60 * 60 * 1000); // every 8 hours or 3 times a day it checks
+        return builder;
     }
 }

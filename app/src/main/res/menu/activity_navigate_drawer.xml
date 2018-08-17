@@ -35,4 +35,12 @@
         android:icon="@drawable/ic_exit_to_app_black_24dp"
         android:title="@string/nav_item_logout" />
 
+    <item
+        android:id="@+id/nav_image_cache"
+        android:title="@string/nav_item_image_size" />
+
+    <item
+        android:id="@+id/nav_audio_cache"
+        android:title="@string/nav_item_audio_size" />
+
 </menu>

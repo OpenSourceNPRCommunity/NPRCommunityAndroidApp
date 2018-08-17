@@ -100,7 +100,6 @@ public class StationListAdapter extends ArrayAdapter<APIStation.ItemJSON> {
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
             fileCache.getImage(
                     item.links.getValidBrand().href,
-                    activity,
                     (FileInputStream fileInputStream, String url) -> {
                         if (fileInputStream == null) {
                             Log.e(TAG, "getView: failed to get image. Check out other logs");

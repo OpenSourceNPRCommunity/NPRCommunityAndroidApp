@@ -31,7 +31,7 @@ public class Shared {
         public @Json(name="content-type") String content_type;
     }
 
-    public static class Progress {
+    public static class Progress implements Serializable {
         // values for tracking the progress and total for download audio
         private int progress = -1,
                 total = -1;

@@ -2,6 +2,7 @@ package com.nprcommunity.npronecommunity;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
@@ -13,6 +14,7 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -298,6 +300,22 @@ public class Navigate extends AppCompatActivity
             Intent i = new Intent(Navigate.this, Login.class);
             startActivity(i);
             finish();
+        } else if (id == R.id.nav_image_cache) {
+            AlertDialog alertDialog = new AlertDialog.Builder(Navigate.this).create();
+            alertDialog.setTitle(R.string.nav_item_image_dialog_title);
+            alertDialog.setMessage(getString(R.string.nav_item_image_dialog_message));
+            alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", (dialogInterface, i) -> {
+                dialogInterface.dismiss();
+            });
+            alertDialog.show();
+        } else if (id == R.id.nav_audio_cache) {
+            AlertDialog alertDialog = new AlertDialog.Builder(Navigate.this).create();
+            alertDialog.setTitle(R.string.nav_item_audio_dialog_title);
+            alertDialog.setMessage(getString(R.string.nav_item_audio_dialog_message));
+            alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", (dialogInterface, i) -> {
+                dialogInterface.dismiss();
+            });
+            alertDialog.show();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

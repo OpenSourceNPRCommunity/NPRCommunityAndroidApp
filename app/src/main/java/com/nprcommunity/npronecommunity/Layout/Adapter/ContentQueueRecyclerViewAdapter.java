@@ -87,7 +87,7 @@ public class ContentQueueRecyclerViewAdapter
         }
 
         // setup progress bar
-        if (tmpQueueItem.links.audio.get(0).progressTracker.getPercentage() == 1.0) {
+        if (tmpQueueItem.links.getValidAudio().progressTracker.isFullyDownloaded()) {
             //finished downloading setup the view
             holder.progressSpeed.setVisibility(View.GONE);
             //TODO replace all 100% Downloaded (there are two of them) with R.string...

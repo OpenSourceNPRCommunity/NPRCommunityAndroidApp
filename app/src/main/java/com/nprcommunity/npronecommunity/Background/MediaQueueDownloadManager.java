@@ -54,7 +54,7 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
     private void setupQueueDownloads() {
         List<APIRecommendations.ItemJSON> itemJSONList = mediaQueueManager.getMediaQueue();
         for (int i = 0; i < itemJSONList.size(); i++) {
-            APIRecommendations.ItemJSON itemJSON = itemJSONList.get(0);
+            APIRecommendations.ItemJSON itemJSON = itemJSONList.get(i);
             APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
             Shared.Progress progress = audioJSON.progressTracker;
             if (!progress.isFullyDownloaded()) {
@@ -77,6 +77,7 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                         itemJSON.href
                 );
                 observable.notifyObservers(bundleMediaProgress);
+                startDownload(i,itemJSON);
             }
         }
     }

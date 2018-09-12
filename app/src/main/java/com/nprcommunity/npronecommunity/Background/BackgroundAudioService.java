@@ -727,7 +727,7 @@ public class BackgroundAudioService extends Service implements
                     currentMedia.attributes.rating.elapsed = currentSeek/1000;
                 }
                 try {
-                    Thread.sleep(750);
+                    Thread.sleep(250);
                 } catch (InterruptedException e) {
                     Log.e(TAG, "onProgressChanged: failed to sleep", e);
                 }

@@ -154,7 +154,9 @@ public class FileCache {
             }
         } else {
             //The file does not exist
-            DownloadManager downloadManager = DownloadManager.getInstance();
+            DownloadManager downloadManager = DownloadManager.getInstance(
+                    DownloadManager.Type.Image
+            );
             downloadManager.execute(
                 new DownloadMediaTask(context, Type.IMAGE, cacheResponse, filename,
                     progressCallback)
@@ -178,7 +180,9 @@ public class FileCache {
             }
         } else {
             //The file does not exist
-            DownloadManager downloadManager = DownloadManager.getInstance();
+            DownloadManager downloadManager = DownloadManager.getInstance(
+                    DownloadManager.Type.Audio
+            );
             DownloadMediaTask downloadMediaTask = new DownloadMediaTask(context, Type.AUDIO, cacheResponse, filename,
                             progressCallback);
             downloadManager.execute(downloadMediaTask);

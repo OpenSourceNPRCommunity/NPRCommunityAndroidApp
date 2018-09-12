@@ -1,5 +1,7 @@
 package com.nprcommunity.npronecommunity.Store;
 
+import android.support.annotation.NonNull;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -10,34 +12,62 @@ import java.util.concurrent.TimeUnit;
 public class DownloadManager extends ThreadPoolExecutor {
 
     private static final BlockingQueue<Runnable> workQueue = new LinkedBlockingDeque<>();
-    private static final int KEEP_ALIVE_TIME = 1;
+    private static final int KEEP_ALIVE_TIME = 10; // wait seconds before killing thread
     private static final TimeUnit KEEP_ALIVE_TIME_UNIT = TimeUnit.SECONDS;
-    private static int HALF_NUMBER_OF_CORES = getNumberCores();
-    private static DownloadManager downloadManager;
+    private static int HALF_NUMBER_OF_CORES = getHalfNumberCores(),
+                        QUARTER_NUMBER_OF_CORES = getQuarterNumberCores();
+    private static DownloadManager imageDownloadManager,
+                                    audioDownloadManager;
     //used to track down the threads
     private final Map<Runnable, Thread> threadHashMap = new HashMap<>();
     private static final Object lock = new Object();
+    public enum Type {
+        Image,
+        Audio
+    }
 
-    public DownloadManager(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+    private DownloadManager(int corePoolSize, int maximumPoolSize, long keepAliveTime,
                            TimeUnit unit, BlockingQueue<Runnable> workQueue) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
     }
 
-    public static DownloadManager getInstance() {
-        if (downloadManager == null) {
-            downloadManager = new DownloadManager(
-                    HALF_NUMBER_OF_CORES,
-                    HALF_NUMBER_OF_CORES,
-                    KEEP_ALIVE_TIME,
-                    KEEP_ALIVE_TIME_UNIT,
-                    workQueue
-            );
+    public static DownloadManager getInstance(@NonNull Type type) {
+        switch (type) {
+            case Image:
+                if (imageDownloadManager == null) {
+                    imageDownloadManager = new DownloadManager(
+                            HALF_NUMBER_OF_CORES,
+                            HALF_NUMBER_OF_CORES,
+                            KEEP_ALIVE_TIME,
+                            KEEP_ALIVE_TIME_UNIT,
+                            workQueue
+                    );
+                }
+                return imageDownloadManager;
+            default:
+                if (audioDownloadManager == null) {
+                    audioDownloadManager = new DownloadManager(
+                            QUARTER_NUMBER_OF_CORES,
+                            QUARTER_NUMBER_OF_CORES,
+                            KEEP_ALIVE_TIME,
+                            KEEP_ALIVE_TIME_UNIT,
+                            workQueue
+                    );
+                }
+                return audioDownloadManager;
         }
-        return downloadManager;
     }
 
-    private static int getNumberCores() {
+    private static int getHalfNumberCores() {
         int cores = Runtime.getRuntime().availableProcessors()/2;
+        if (cores <= 0) {
+            cores = 1;
+        }
+        return cores;
+    }
+
+    private static int getQuarterNumberCores() {
+        int cores = Runtime.getRuntime().availableProcessors()/4;
         if (cores <= 0) {
             cores = 1;
         }

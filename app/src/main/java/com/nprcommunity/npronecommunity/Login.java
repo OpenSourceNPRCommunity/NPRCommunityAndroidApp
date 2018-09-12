@@ -34,6 +34,7 @@ public class Login extends AppCompatActivity {
         if(hasValidToken()) {
             Intent i = new Intent(Login.this, Navigate.class);
             startActivity(i);
+            finish();
             return;
         }
 

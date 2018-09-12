@@ -241,7 +241,9 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
 
         if (downloadMediaTask != null) {
             //join on the runnable before deleting
-            DownloadManager downloadManager = DownloadManager.getInstance();
+            DownloadManager downloadManager = DownloadManager.getInstance(
+                    DownloadManager.Type.Audio
+            );
             Thread tmpThread = downloadManager.removeRunnable(downloadMediaTask);
             if (tmpThread != null) {
                 tmpThread.interrupt();

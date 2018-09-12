@@ -154,10 +154,10 @@ public class FileCache {
             }
         } else {
             //The file does not exist
-            DownloadManager downloadManager = DownloadManager.getInstance(
-                    DownloadManager.Type.Image
+            DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
+                    DownloadPoolExecutor.Type.Image
             );
-            downloadManager.execute(
+            downloadPoolExecutor.execute(
                 new DownloadMediaTask(context, Type.IMAGE, cacheResponse, filename,
                     progressCallback)
             );
@@ -180,12 +180,12 @@ public class FileCache {
             }
         } else {
             //The file does not exist
-            DownloadManager downloadManager = DownloadManager.getInstance(
-                    DownloadManager.Type.Audio
+            DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
+                    DownloadPoolExecutor.Type.Audio
             );
             DownloadMediaTask downloadMediaTask = new DownloadMediaTask(context, Type.AUDIO, cacheResponse, filename,
                             progressCallback);
-            downloadManager.execute(downloadMediaTask);
+            downloadPoolExecutor.execute(downloadMediaTask);
             return downloadMediaTask;
         }
         return null;

@@ -7,7 +7,7 @@ import android.util.Log;
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.Shared;
 import com.nprcommunity.npronecommunity.R;
-import com.nprcommunity.npronecommunity.Store.DownloadManager;
+import com.nprcommunity.npronecommunity.Store.DownloadPoolExecutor;
 import com.nprcommunity.npronecommunity.Store.DownloadMediaTask;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.ProgressCallback;
@@ -241,10 +241,10 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
 
         if (downloadMediaTask != null) {
             //join on the runnable before deleting
-            DownloadManager downloadManager = DownloadManager.getInstance(
-                    DownloadManager.Type.Audio
+            DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
+                    DownloadPoolExecutor.Type.Audio
             );
-            Thread tmpThread = downloadManager.removeRunnable(downloadMediaTask);
+            Thread tmpThread = downloadPoolExecutor.removeRunnable(downloadMediaTask);
             if (tmpThread != null) {
                 tmpThread.interrupt();
             }

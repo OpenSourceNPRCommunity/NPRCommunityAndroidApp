@@ -42,6 +42,7 @@ Immediate Goals:
 - Disable sound if not already playing even though is open
 - Add in activity thing in dropdown
 - Add in activity thing on off screen
+- Add waiting to audio files that are in the queue
 
 ### Long Term not as important goals, but have been on my mind...
 

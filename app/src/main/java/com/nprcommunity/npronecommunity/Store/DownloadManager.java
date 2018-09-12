@@ -11,7 +11,8 @@ import java.util.concurrent.TimeUnit;
 
 public class DownloadManager extends ThreadPoolExecutor {
 
-    private static final BlockingQueue<Runnable> workQueue = new LinkedBlockingDeque<>();
+    private static final BlockingQueue<Runnable> imageWorkQueue = new LinkedBlockingDeque<>(),
+            audioWorkQueue = new LinkedBlockingDeque<>();
     private static final int KEEP_ALIVE_TIME = 10; // wait seconds before killing thread
     private static final TimeUnit KEEP_ALIVE_TIME_UNIT = TimeUnit.SECONDS;
     private static int HALF_NUMBER_OF_CORES = getHalfNumberCores(),
@@ -40,7 +41,7 @@ public class DownloadManager extends ThreadPoolExecutor {
                             HALF_NUMBER_OF_CORES,
                             KEEP_ALIVE_TIME,
                             KEEP_ALIVE_TIME_UNIT,
-                            workQueue
+                            imageWorkQueue
                     );
                 }
                 return imageDownloadManager;
@@ -51,7 +52,7 @@ public class DownloadManager extends ThreadPoolExecutor {
                             QUARTER_NUMBER_OF_CORES,
                             KEEP_ALIVE_TIME,
                             KEEP_ALIVE_TIME_UNIT,
-                            workQueue
+                            audioWorkQueue
                     );
                 }
                 return audioDownloadManager;

@@ -61,6 +61,7 @@ public class DownloadMediaTask implements Runnable{
             try {
                 //get url data //TODO add in check for get the url to add header if its to npr
                 urlConnection = new URL(url).openConnection();
+                urlConnection.setConnectTimeout(5000);
                 List<String> contentLength = urlConnection.getHeaderFields().get("content-Length");
                 if (contentLength != null && contentLength.size() > 0) {
                     try {

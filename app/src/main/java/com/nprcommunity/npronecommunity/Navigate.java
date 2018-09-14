@@ -247,7 +247,7 @@ public class Navigate extends AppCompatActivity
             getSupportFragmentManager().popBackStack();
             buttonMediaMaxMin.animate().rotation(0).start();
         } else {
-            super.onBackPressed();
+            moveTaskToBack(true);
         }
     }
 

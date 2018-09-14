@@ -55,6 +55,7 @@ public class BackgroundAudioService extends Service implements
     };
     private boolean isPrepared = false,
             isPlaying = false,
+            wasPlayingBeforeLostFocus = false,
             playMedia = true,
             isCompleted = false;
     private static final Object lock = new Object();
@@ -241,10 +242,18 @@ public class BackgroundAudioService extends Service implements
         if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
             // Permanent loss of audio focus
             // PAUSE playback immediately
+
+            // losing permanently, set was playing to false no matter what.
+            wasPlayingBeforeLostFocus = false;
+
             this.pauseMedia();
         }
         else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
             // PAUSE playback
+
+            // set last playback to whether or not music was playing
+            wasPlayingBeforeLostFocus = isPlaying;
+
             this.pauseMedia();
         } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
             // Lower the volume, keep playing
@@ -259,7 +268,11 @@ public class BackgroundAudioService extends Service implements
             synchronized (lock) {
                 mediaPlayer.setVolume(maxVolume, maxVolume);
             }
-            playMedia();
+
+            // if the media was playing before lost focus then continue playing
+            if (wasPlayingBeforeLostFocus) {
+                playMedia();
+            }
         }
     }
 

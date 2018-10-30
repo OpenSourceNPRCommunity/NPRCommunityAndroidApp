@@ -17,7 +17,6 @@ import android.widget.TextView;
 import com.nprcommunity.npronecommunity.API.APIDataResponse;
 import com.nprcommunity.npronecommunity.API.APIChannels;
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
-import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Layout.Adapter.RecommendationsAdapter;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.ChannelCache;
@@ -25,33 +24,21 @@ import com.nprcommunity.npronecommunity.Store.CacheStructures.RecommendationCach
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link ContentRecommendationsFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link ContentRecommendationsFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class ContentRecommendationsFragment extends Fragment {
-
-    private static BackgroundAudioService backgroundAudioService;
 
     private static String TAG = "LAYOUT.FRAGMENT.CONTENTRECOMMENDATIONSFRAGMENT";
 
-    private OnFragmentInteractionListener mListener;
+    private OnFragmentInteractionListener listener;
 
     public ContentRecommendationsFragment() {
         // Required empty public constructor
     }
 
-    public static ContentRecommendationsFragment newInstance(BackgroundAudioService bas) {
+    public static ContentRecommendationsFragment newInstance() {
         ContentRecommendationsFragment fragment = new ContentRecommendationsFragment();
-        backgroundAudioService = bas;
         return fragment;
     }
 
@@ -59,6 +46,7 @@ public class ContentRecommendationsFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
+
         }
     }
 
@@ -106,7 +94,7 @@ public class ContentRecommendationsFragment extends Fragment {
         APIChannels.updateData(channelApiDataResponse);
     }
 
-    private static void initRecommendationRow(APIChannels.ItemJSON channelItem, Activity activity) {
+    private void initRecommendationRow(APIChannels.ItemJSON channelItem, Activity activity) {
         APIRecommendations APIRecommendations = new APIRecommendations(activity, channelItem.href);
         APIDataResponse recommendationsApiDataResponse = () -> {
             RecommendationCache recommendationsData = APIRecommendations.getData();
@@ -150,7 +138,7 @@ public class ContentRecommendationsFragment extends Fragment {
                     RecommendationsAdapter tmpRecommendationsAdapter = new RecommendationsAdapter(
                             ((APIRecommendations.RecommendationsJSON)recommendationsData.data).items,
                             activity,
-                            backgroundAudioService);
+                            listener);
                     tmpView.setAdapter(tmpRecommendationsAdapter);
                 }
             }
@@ -158,18 +146,11 @@ public class ContentRecommendationsFragment extends Fragment {
         APIRecommendations.updateData(recommendationsApiDataResponse);
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
-    }
-
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
+            listener = (OnFragmentInteractionListener) context;
         } else {
             throw new RuntimeException(context.toString()
                     + " must implement OnFragmentInteractionListener");
@@ -179,11 +160,12 @@ public class ContentRecommendationsFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
+        listener = null;
     }
 
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
+        String getMediaHref();
+        void addToQueue(APIRecommendations.ItemJSON queueItem);
+        void playMediaNow(APIRecommendations.ItemJSON queueItem);
     }
 }

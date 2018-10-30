@@ -15,7 +15,7 @@ import android.widget.TextView;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.Background.MediaQueueManager;
-import com.nprcommunity.npronecommunity.Layout.Callback.ContentQueuePlayingListener;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.Layout.Callback.ItemTouchHelperListener;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment.OnListFragmentInteractionListener;
 import com.nprcommunity.npronecommunity.R;
@@ -31,18 +31,15 @@ public class ContentQueueRecyclerViewAdapter
     private final Context context;
     private final static String TAG = "CONTENTQUEUERECYCLER";
     private MediaQueueManager mediaQueueManager;
-    private ContentQueuePlayingListener contentQueuePlayingListener;
     private Activity activity;
 
     public ContentQueueRecyclerViewAdapter(
             OnListFragmentInteractionListener listener,
-            ContentQueuePlayingListener contentQueuePlayingListener,
             Context context,
             Activity activity) {
         this.listener = listener;
         this.context = context;
         this.mediaQueueManager = MediaQueueManager.getInstance(context);
-        this.contentQueuePlayingListener = contentQueuePlayingListener;
         this.activity = activity;
     }
 
@@ -55,7 +52,9 @@ public class ContentQueueRecyclerViewAdapter
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
-        APIRecommendations.ItemJSON tmpQueueItem = mediaQueueManager.getQueueTrack(position);
+        APIRecommendations.ItemJSON tmpQueueItem = (APIRecommendations.ItemJSON) mediaQueueManager
+                .getQueueTrack(position).getDescription().getExtras()
+                    .getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
         holder.setSkippable(tmpQueueItem.attributes.skippable);
 
         holder.titleView.setText(tmpQueueItem.attributes.audioTitle);
@@ -100,7 +99,7 @@ public class ContentQueueRecyclerViewAdapter
         if (tmpQueueItem.attributes.skippable) {
             //only enable if skippable
             holder.closeImageButton.setOnClickListener((View v) -> {
-                int removedIndex = contentQueuePlayingListener.remove(tmpQueueItem);
+                int removedIndex = listener.remove(tmpQueueItem);
                 if (removedIndex >= 0) {
                     notifyItemRemoved(removedIndex);
                 }
@@ -112,9 +111,7 @@ public class ContentQueueRecyclerViewAdapter
 
         holder.view.setOnClickListener((View v) -> {
             if (null != listener) {
-                // Notify the active callbacks interface (the activity, if the
-                // fragment is attached to one) that an item has been selected.
-                listener.onListFragmentInteraction(tmpQueueItem.href);
+                Log.d(TAG, "onBindViewHolder: clicked: " + tmpQueueItem.href);
             }
         });
     }
@@ -125,7 +122,7 @@ public class ContentQueueRecyclerViewAdapter
     }
 
     public void removeItem(APIRecommendations.ItemJSON itemJSON) {
-        int position = contentQueuePlayingListener.remove(itemJSON);
+        int position = listener.remove(itemJSON);
         if (position >= 0) {
             notifyItemRemoved(position);
         } else {
@@ -177,12 +174,12 @@ public class ContentQueueRecyclerViewAdapter
 
     @Override
     public void onItemDismiss(int position) {
-        contentQueuePlayingListener.remove(position);
+        listener.remove(position);
         notifyItemRemoved(position);
     }
 
     @Override
     public void onItemDrop(int fromPosition, int toPosition) {
-        contentQueuePlayingListener.swap(fromPosition, toPosition);
+        listener.swap(fromPosition, toPosition);
     }
 }

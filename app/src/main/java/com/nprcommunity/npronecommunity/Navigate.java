@@ -1,16 +1,19 @@
 package com.nprcommunity.npronecommunity;
 
 import android.content.ComponentName;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.os.RemoteException;
+import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaDescriptionCompat;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -29,7 +32,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
-import com.nprcommunity.npronecommunity.API.RatingSender;
 import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentPageAdapter;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentQueueRecyclerViewAdapter;
@@ -40,10 +42,24 @@ import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFr
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
-import java.util.Observer;
+import java.util.List;
 
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_BUFFERING;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.ACTION;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.Action.PAUSE_BUTTON;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.Action.PLAY_BUTTON;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.ActionExtras.MEDIA_NEXT_IS_SKIPPABLE;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.ActionExtras.MEDIA_PREPARED_IS_SKIPPABLE;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.PLAY_MEDIA_NOW;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.ADD_ITEM_OBJECT;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.PLAY_MEDIA_NOW_QUEUE_ITEM;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.REMOVE_INDEX_I;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.REMOVE_ITEM_OBJECT;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.SWAP_POS_ONE;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.SWAP_POS_TWO;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.METADATA_KEY_IMAGE_HREF;
 
 public class Navigate extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -53,8 +69,6 @@ public class Navigate extends AppCompatActivity
 
     private static final String TAG = "NAVIGATE";
 
-    private IBinder serviceBinder;
-    private ServiceConnection serverConn;
     private Button buttonNext, buttonRewind, buttonPausePlay, buttonMediaMaxMin;
     private ProgressBar progressBarButtonPausePlay;
     private TextView currentMediaTextView;
@@ -66,11 +80,90 @@ public class Navigate extends AppCompatActivity
     //used for keeping track if up or down
     private boolean isButtonMediaMax = false;
 
-    public final Observer serviceObserver = (o, arg) -> {
-        Navigate.this.runOnUiThread(() -> {
-            updateAction((Bundle) arg);
-        });
+    private MediaControllerCompat.Callback mediaControllerCompatCallback = new MediaControllerCompat.Callback() {
+
+        @Override
+        public void onSessionEvent(String event, Bundle extras) {
+            super.onSessionEvent(event, extras);
+            Navigate.this.runOnUiThread(() -> {
+                updateAction(extras);
+            });
+        }
+
+        @Override
+        public void onPlaybackStateChanged(PlaybackStateCompat state) {
+            super.onPlaybackStateChanged(state);
+            if (state == null) {
+                return;
+            }
+
+            switch (state.getState()) {
+                //TODO TODO migrate backend to use state for all changes instead of onSessionEvent()
+                case STATE_PLAYING:
+                    Bundle bundlePlay = new Bundle();
+                    bundlePlay.putString(ACTION, PAUSE_BUTTON.name());
+                    updateAction(bundlePlay);
+                    break;
+                case STATE_PAUSED:
+                    Bundle bundlePause = new Bundle();
+                    bundlePause.putString(ACTION, PLAY_BUTTON.name());
+                    updateAction(bundlePause);
+                    break;
+            }
+        }
     };
+    private MediaControllerCompat mediaControllerCompat;
+    private MediaBrowserCompat mediaBrowserCompat;
+    private MediaBrowserCompat.ConnectionCallback mediaBrowserCompatConnectionCallback = new MediaBrowserCompat.ConnectionCallback() {
+        @Override
+        public void onConnected() {
+            super.onConnected();
+            try {
+                mediaControllerCompat = new MediaControllerCompat(Navigate.this, mediaBrowserCompat.getSessionToken());
+                mediaControllerCompat.registerCallback(mediaControllerCompatCallback);
+                MediaControllerCompat.setMediaController(Navigate.this, mediaControllerCompat);
+                //TODO THIS media controller to play
+//                MediaControllerCompat.getMediaController(Navigate.this).
+//                        getTransportControls().playFromMediaId(String.valueOf(R.raw.warner_tautz_off_broadway), null);
+
+
+                //setup content page adapter
+                contentViewPagerFragmentHolder = ContentViewPagerFragmentHolder.newInstance();
+                getSupportFragmentManager().beginTransaction()
+                        .add(R.id.content_container_fragment, contentViewPagerFragmentHolder).commit();
+
+                //set the current title
+                currentMediaTextView.setText(
+                        mediaControllerCompat.getMetadata().getDescription().getTitle()
+                );
+
+                //set the button text
+                if (mediaControllerCompat.getPlaybackState().getState() == STATE_PLAYING) {
+                    buttonPausePlay.setBackground(getDrawable(R.drawable.ic_pause_white_24dp));
+                } else {
+                    buttonPausePlay.setBackground(getDrawable(R.drawable.ic_play_arrow_white_24dp));
+                }
+
+                //set the next button and play button
+                buttonPausePlay.setEnabled(
+                        mediaControllerCompat.getPlaybackState().getState() == STATE_BUFFERING
+                );
+                if (Navigate.this.isMediaSkippable()) {
+                    //if it is skippable then we check if has next media
+                    buttonNext.setEnabled(Navigate.this.hasNextMedia());
+                } else {
+                    buttonNext.setEnabled(false);
+                }
+
+            } catch (RemoteException e) {
+                Log.e(TAG, "onConnected: error connecting to remote", e);
+            }
+        }
+    };
+
+    private boolean hasNextMedia() {
+        return mediaControllerCompat.getQueue().size() > 1;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,50 +244,33 @@ public class Navigate extends AppCompatActivity
         //schedule the job
         FileCache.createCacheJobService(this);
 
-        // last thing should be to setup the server connection
-        setServerConn();
+        // setup to listen to media combat and get callbacks
+        mediaBrowserCompat = new MediaBrowserCompat(this,
+                new ComponentName(this, BackgroundAudioService.class),
+                mediaBrowserCompatConnectionCallback, getIntent().getExtras());
+        mediaBrowserCompat.connect();
     }
 
     private void setupMediaButtons() {
         buttonNext = findViewById(R.id.button_next);
         buttonNext.setOnClickListener((View v) -> {
-            if (serviceBinder.isBinderAlive()) {
-                BackgroundAudioService.LocalBinder  localBinder
-                    = (BackgroundAudioService.LocalBinder) serviceBinder;
-                BackgroundAudioService backgroundAudioService = localBinder.getService();
-                backgroundAudioService.nextMedia(true);
-            } else {
-                //TODO: error out or something?
-            }
+            mediaControllerCompat.getTransportControls().skipToNext();
         });
 
         buttonRewind = findViewById(R.id.button_rewind);
         buttonRewind.setOnClickListener((View v) -> {
-            if (serviceBinder.isBinderAlive()) {
-                BackgroundAudioService.LocalBinder  localBinder
-                        = (BackgroundAudioService.LocalBinder) serviceBinder;
-                BackgroundAudioService backgroundAudioService = localBinder.getService();
-                backgroundAudioService.seekMedia(
-                        backgroundAudioService.getMediaCurrentPosition()-(int)(10*Util.MILLI_SECOND)
-                );
-            } else {
-                //TODO: error out or something?
-            }
+            mediaControllerCompat.getTransportControls().seekTo(
+                    mediaControllerCompat.getPlaybackState().getPosition()
+                            -(int)(10*Util.MILLI_SECOND)
+            );
         });
 
         buttonPausePlay = findViewById(R.id.button_pause_play);
         buttonPausePlay.setOnClickListener((View v) -> {
-            if (serviceBinder.isBinderAlive()) {
-                BackgroundAudioService.LocalBinder  localBinder
-                        = (BackgroundAudioService.LocalBinder) serviceBinder;
-                BackgroundAudioService backgroundAudioService = localBinder.getService();
-                if (backgroundAudioService.getIsPlaying()) {
-                    backgroundAudioService.pauseMedia();
-                } else {
-                    backgroundAudioService.playMedia();
-                }
+            if (mediaControllerCompat.getPlaybackState().getState() == STATE_PLAYING) {
+                mediaControllerCompat.getTransportControls().pause();
             } else {
-                //TODO: error out or something?
+                mediaControllerCompat.getTransportControls().play();
             }
         });
 
@@ -205,14 +281,7 @@ public class Navigate extends AppCompatActivity
             if (isButtonMediaMax) {
                 // Create fragment
                 if (contentMediaPlayerFragment == null) {
-                    BackgroundAudioService.LocalBinder  localBinder
-                            = (BackgroundAudioService.LocalBinder) serviceBinder;
-                    BackgroundAudioService backgroundAudioService = localBinder.getService();
-                    if (backgroundAudioService != null) {
-                        contentMediaPlayerFragment = ContentMediaPlayerFragment.newInstance(
-                                backgroundAudioService
-                        );
-                    }
+                    contentMediaPlayerFragment = ContentMediaPlayerFragment.newInstance();
                 }
 
                 //make transaction to replace current fragment
@@ -324,94 +393,25 @@ public class Navigate extends AppCompatActivity
     }
 
     @Override
-    public void onFragmentInteraction(Uri uri) {
-        Log.i(TAG, "HEY IM A URI: " + uri.toString());
-    }
-
-    @Override
     public void onDestroy() {
-        //remove the observer on destroy
-        BackgroundAudioService.LocalBinder  localBinder
-                = (BackgroundAudioService.LocalBinder) serviceBinder;
-        BackgroundAudioService backgroundAudioService = localBinder.getService();
-        backgroundAudioService.removeObserver(serviceObserver);
-
-        unbindService(serverConn);
-        stopService(new Intent(this, BackgroundAudioService.class));
         super.onDestroy();
+        if (mediaControllerCompat.getPlaybackState().getState() != PlaybackStateCompat.STATE_PLAYING) {
+            mediaControllerCompat.getTransportControls().pause();
+        }
+
+        mediaBrowserCompat.disconnect();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-    }
-
-    private void setServerConn() {
-        serverConn = new ServiceConnection() {
-
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder binder) {
-                Log.d(TAG, "onServiceConnected");
-
-                serviceBinder = binder;
-
-                //get background service
-                BackgroundAudioService.LocalBinder  localBinder
-                        = (BackgroundAudioService.LocalBinder) serviceBinder;
-                BackgroundAudioService backgroundAudioService = localBinder.getService();
-
-                if (backgroundAudioService == null) {
-                    //todo error out
-                    return;
-                }
-
-                //setup content page adapter
-                contentViewPagerFragmentHolder = ContentViewPagerFragmentHolder.newInstance(
-                        backgroundAudioService
-                );
-                getSupportFragmentManager().beginTransaction()
-                        .add(R.id.content_container_fragment, contentViewPagerFragmentHolder).commit();
-
-                //setup observer
-                backgroundAudioService.addObserver(serviceObserver);
-
-                //set the current title
-                currentMediaTextView.setText(
-                        backgroundAudioService.getMediaTitle()
-                );
-
-                //set the button text
-                if (backgroundAudioService.getIsPlaying()) {
-                    buttonPausePlay.setBackground(getDrawable(R.drawable.ic_pause_white_24dp));
-                } else {
-                    buttonPausePlay.setBackground(getDrawable(R.drawable.ic_play_arrow_white_24dp));
-                }
-
-                //set the next button and play button
-                buttonPausePlay.setEnabled(backgroundAudioService.hasMedia());
-                if (backgroundAudioService.getMediaIsSkippable()) {
-                    //if it is skippable then we check if has next media
-                    buttonNext.setEnabled(backgroundAudioService.hasNextMedia());
-                } else {
-                    buttonNext.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                Log.d(TAG, "onServiceDisconnected");
-                //TODO: Error or something about service
-            }
-        };
-
-        Intent intent = new Intent(this, BackgroundAudioService.class);
-        bindService(intent, serverConn, Context.BIND_AUTO_CREATE);
-        startService(intent);
+        //set the media controller to this activity
+        MediaControllerCompat.setMediaController(this, mediaControllerCompat);
     }
 
     private void updateAction(Bundle bundle) {
         BackgroundAudioService.Action action = BackgroundAudioService.Action.valueOf(
-                bundle.getString(BackgroundAudioService.ACTION)
+                bundle.getString(ACTION)
         );
         ContentQueueRecyclerViewAdapter adapter = null;
         ContentQueueFragment contentQueueFragment = null;
@@ -450,14 +450,11 @@ public class Navigate extends AppCompatActivity
                     //TODO change this to specify notify remove data item
                     adapter.removeItem(itemJSON);
                 }
-
-                //send update about error loading
-                BackgroundAudioService.LocalBinder  localBinder
-                        = (BackgroundAudioService.LocalBinder) serviceBinder;
-                BackgroundAudioService backgroundAudioService = localBinder.getService();
-                if (backgroundAudioService != null) {
-                    backgroundAudioService.sendRatingUpdate(RatingSender.Type.TIMEOUT);
-                }
+                mediaControllerCompat.sendCommand(
+                        BackgroundAudioService.CommandCompat.SEND_RATING_TIMEOUT.name(),
+                        null,
+                        null
+                );
                 break;
             case MEDIA_NEXT:
                 boolean[] bools = bundle.getBooleanArray(
@@ -604,8 +601,37 @@ public class Navigate extends AppCompatActivity
     }
 
     @Override
-    public void onListFragmentInteraction(String queueItemURL) {
-        Log.d(TAG, "onListFragmentInteraction: " + queueItemURL);
+    public void remove(int position) {
+        Bundle bundleRemove = new Bundle();
+        bundleRemove.putSerializable(REMOVE_INDEX_I.name(), position);
+        mediaControllerCompat.sendCommand(
+                BackgroundAudioService.CommandCompat.REMOVE_INDEX.name(),
+                bundleRemove, null);
+    }
+
+    @Override
+    public int remove(APIRecommendations.ItemJSON itemJSON) {
+        List<MediaSessionCompat.QueueItem> tmpQueueList = mediaControllerCompat.getQueue();
+        for (int i = 0; i < tmpQueueList.size(); i++) {
+            if (tmpQueueList.get(i).getDescription().getMediaId().equals(itemJSON.href)) {
+                Bundle bundleRemove = new Bundle();
+                bundleRemove.putSerializable(REMOVE_ITEM_OBJECT.name(), itemJSON);
+                mediaControllerCompat.sendCommand(
+                        BackgroundAudioService.CommandCompat.REMOVE_ITEM.name(),
+                        bundleRemove, null);
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public void swap(int fromPosition, int toPosition) {
+        Bundle bundleSwap = new Bundle();
+        bundleSwap.putInt(SWAP_POS_ONE.name(), fromPosition);
+        bundleSwap.putInt(SWAP_POS_TWO.name(), fromPosition);
+        mediaControllerCompat.sendCommand(BackgroundAudioService.CommandCompat.SWAP.name(),
+                bundleSwap, null);
     }
 
     @Override
@@ -623,5 +649,59 @@ public class Navigate extends AppCompatActivity
                 contentViewPagerFragmentHolder.getContentPageAdapter().notifyDataSetChanged();
                 break;
         }
+    }
+
+    @Override
+    public void seekMedia(int pos) {
+        mediaControllerCompat.getTransportControls().seekTo(pos);
+    }
+
+    @NonNull
+    @Override
+    public MediaDescriptionCompat getMediaDescription() {
+        return mediaControllerCompat.getMetadata().getDescription();
+    }
+
+    @Override
+    public int getDuration() {
+        return (int)mediaControllerCompat.getMetadata().getLong(MediaMetadataCompat.METADATA_KEY_DURATION);
+    }
+
+    @Override
+    public int getCurrentPosition() {
+        return (int)mediaControllerCompat.getPlaybackState().getPosition();
+    }
+
+    @Override
+    public boolean isMediaSkippable() {
+        return mediaControllerCompat.getMetadata()
+                .getLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT) != 0;
+    }
+
+    @Override
+    public String getMediaImage() {
+        return mediaControllerCompat.getMetadata()
+                .getString(METADATA_KEY_IMAGE_HREF);
+
+    }
+
+    @Override
+    public String getMediaHref() {
+        return mediaControllerCompat.getMetadata().getDescription().getMediaId();
+    }
+
+    @Override
+    public void addToQueue(APIRecommendations.ItemJSON queueItem) {
+        Bundle bundleSwap = new Bundle();
+        bundleSwap.putSerializable(ADD_ITEM_OBJECT.name(), queueItem);
+        mediaControllerCompat.sendCommand(BackgroundAudioService.CommandCompat.ADD_ITEM.name(),
+                bundleSwap, null);
+    }
+
+    @Override
+    public void playMediaNow(APIRecommendations.ItemJSON queueItem) {
+        Bundle playMediaNow = new Bundle();
+        playMediaNow.putSerializable(PLAY_MEDIA_NOW_QUEUE_ITEM.name(), queueItem);
+        mediaControllerCompat.sendCommand(PLAY_MEDIA_NOW.name(), playMediaNow, null);
     }
 }

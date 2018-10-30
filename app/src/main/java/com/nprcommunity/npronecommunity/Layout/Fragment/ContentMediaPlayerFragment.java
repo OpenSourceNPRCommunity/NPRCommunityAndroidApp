@@ -2,9 +2,10 @@ package com.nprcommunity.npronecommunity.Layout.Fragment;
 
 import android.content.Context;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v4.media.MediaDescriptionCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,8 +14,6 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.nprcommunity.npronecommunity.API.Shared;
-import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Util;
@@ -33,8 +32,7 @@ import java.io.FileInputStream;
 public class ContentMediaPlayerFragment extends Fragment {
 
     private static String TAG = "CONTENTMEDIAPLAYERFRAGMENT";
-    private OnFragmentInteractionListener mListener;
-    private static BackgroundAudioService backgroundAudioService;
+    private OnFragmentInteractionListener listener;
 
     private TextView mediaPlayerSeekBarTextLeft, mediaPlayerSeekBarTextCenter, mediaPlayerSeekBarTextRight, mediaPlayerTitle, mediaPlayerDesc;
     private SeekBar mediaPlayerSeekBar;
@@ -42,8 +40,7 @@ public class ContentMediaPlayerFragment extends Fragment {
 
     public ContentMediaPlayerFragment() {}
 
-    public static ContentMediaPlayerFragment newInstance(BackgroundAudioService bas) {
-        backgroundAudioService = bas;
+    public static ContentMediaPlayerFragment newInstance() {
         ContentMediaPlayerFragment fragment = new ContentMediaPlayerFragment();
         Bundle args = new Bundle();
         fragment.setArguments(args);
@@ -60,40 +57,38 @@ public class ContentMediaPlayerFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.content_media_player_fragment, container, false);
-        if (backgroundAudioService != null) {
-            //setup fragment
-            mediaPlayerSeekBarTextLeft = view.findViewById(R.id.media_player_seek_bar_text_left);
-            mediaPlayerSeekBarTextCenter = view.findViewById(R.id.media_player_seek_bar_text_center);
-            mediaPlayerSeekBarTextRight = view.findViewById(R.id.media_player_seek_bar_text_right);
-            mediaPlayerSeekBar = view.findViewById(R.id.media_player_seek_bar);
-            mediaPlayerSeekBar.setMax(backgroundAudioService.getMediaDuration());
-            mediaPlayerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (fromUser) {
-                        mediaPlayerSeekBarTextCenter.setText(
-                                Util.millisecondToHoursMinutesSeconds(progress)
-                        );
-                    }
+        //setup fragment
+        mediaPlayerSeekBarTextLeft = view.findViewById(R.id.media_player_seek_bar_text_left);
+        mediaPlayerSeekBarTextCenter = view.findViewById(R.id.media_player_seek_bar_text_center);
+        mediaPlayerSeekBarTextRight = view.findViewById(R.id.media_player_seek_bar_text_right);
+        mediaPlayerSeekBar = view.findViewById(R.id.media_player_seek_bar);
+        mediaPlayerSeekBar.setMax(listener.getDuration());
+        mediaPlayerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    mediaPlayerSeekBarTextCenter.setText(
+                            Util.millisecondToHoursMinutesSeconds(progress)
+                    );
                 }
+            }
 
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-                    mediaPlayerSeekBarTextCenter.setVisibility(View.VISIBLE);
-                }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                mediaPlayerSeekBarTextCenter.setVisibility(View.VISIBLE);
+            }
 
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    backgroundAudioService.seekMedia(seekBar.getProgress());
-                    setSeek(seekBar.getProgress(), false);
-                    mediaPlayerSeekBarTextCenter.setVisibility(View.INVISIBLE);
-                }
-            });
-            mediaPlayerTitle = view.findViewById(R.id.media_player_title);
-            mediaPlayerDesc = view.findViewById(R.id.media_player_description);
-            mediaPlayerImageView = view.findViewById(R.id.media_player_image_view);
-            updateMedia();
-        }
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                listener.seekMedia(seekBar.getProgress());
+                setSeek(seekBar.getProgress(), false);
+                mediaPlayerSeekBarTextCenter.setVisibility(View.INVISIBLE);
+            }
+        });
+        mediaPlayerTitle = view.findViewById(R.id.media_player_title);
+        mediaPlayerDesc = view.findViewById(R.id.media_player_description);
+        mediaPlayerImageView = view.findViewById(R.id.media_player_image_view);
+        updateMedia();
         return view;
     }
 
@@ -113,20 +108,15 @@ public class ContentMediaPlayerFragment extends Fragment {
     }
 
     public void updateMedia() {
-        if (backgroundAudioService == null) {
-            Log.e(TAG, "updateMedia: backgroundaudioservice is null");
-            return;
-        }
-
         if (mediaPlayerSeekBarTextLeft != null) {
             mediaPlayerSeekBarTextLeft.setText(
                     Util.millisecondToHoursMinutesSeconds(
-                            backgroundAudioService.getMediaCurrentPosition()
+                            listener.getCurrentPosition()
                     )
             );
         }
 
-        long duration = backgroundAudioService.getMediaDuration();
+        long duration = listener.getDuration();
 
         if (mediaPlayerSeekBarTextRight != null) {
             mediaPlayerSeekBarTextRight.setText(
@@ -135,17 +125,17 @@ public class ContentMediaPlayerFragment extends Fragment {
         }
 
         if (mediaPlayerTitle != null) {
-            mediaPlayerTitle.setText(backgroundAudioService.getMediaTitle());
+            mediaPlayerTitle.setText(listener.getMediaDescription().getTitle());
         }
         if (mediaPlayerDesc != null) {
-            mediaPlayerDesc.setText(backgroundAudioService.getMediaDescription());
+            mediaPlayerDesc.setText(listener.getMediaDescription().getDescription());
         }
         if (mediaPlayerImageView != null ){
             setMediaPicture();
         }
 
         if (mediaPlayerSeekBar != null) {
-            mediaPlayerSeekBar.setEnabled(backgroundAudioService.getMediaIsSkippable());
+            mediaPlayerSeekBar.setEnabled(listener.isMediaSkippable());
             mediaPlayerSeekBar.setMax((int)duration);
         }
     }
@@ -153,11 +143,11 @@ public class ContentMediaPlayerFragment extends Fragment {
     private void setMediaPicture() {
         mediaPlayerImageView.setImageResource(R.drawable.blank_image);
         FileCache fileCache = FileCache.getInstances(this.getContext());
-        Shared.ImageJSON imageJSON = backgroundAudioService.getMediaImage();
+        String hrefImage = listener.getMediaImage();
         //if the image is not a drawable (aka the media has its own image, then we load it)
-        if (!imageJSON.isImageDrawable()) {
+        if (hrefImage != null) {
             fileCache.getImage(
-                    imageJSON.href,
+                    hrefImage,
                     (FileInputStream fileInputStream, String url) -> {
                         if (fileInputStream == null) {
                             //TODO: put up blank image
@@ -171,7 +161,7 @@ public class ContentMediaPlayerFragment extends Fragment {
                     },
                     (int progress, int total, int speed) -> {
                         Log.d(TAG, "nextMediaHelper: progress loading image content player: "
-                            + imageJSON.href + " at "
+                            + hrefImage + " at "
                             + " progress [" + progress + "] total [" + total + "] "
                             + " percent [" + ((double)progress)/((double)total));
                     }
@@ -179,18 +169,11 @@ public class ContentMediaPlayerFragment extends Fragment {
         }
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
-    }
-
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
+            listener = (OnFragmentInteractionListener) context;
         } else {
             throw new RuntimeException(context.toString()
                     + " must implement OnFragmentInteractionListener");
@@ -200,21 +183,15 @@ public class ContentMediaPlayerFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
+        listener = null;
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
+        void seekMedia(int pos);
+        @NonNull MediaDescriptionCompat getMediaDescription();
+        int getDuration();
+        int getCurrentPosition();
+        boolean isMediaSkippable();
+        String getMediaImage();
     }
 }

@@ -1,7 +1,6 @@
 package com.nprcommunity.npronecommunity.Layout.Adapter;
 
 import android.app.Activity;
-import android.graphics.Color;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,7 +10,7 @@ import android.widget.LinearLayout;
 
 import com.nprcommunity.npronecommunity.API.APIAggregations;
 import com.nprcommunity.npronecommunity.API.APISearch;
-import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
+import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.TileDialogFragment;
 import com.nprcommunity.npronecommunity.R;
 
@@ -20,15 +19,15 @@ import java.util.List;
 public class SearchListAdapter extends ArrayAdapter<APISearch.ItemJSON> {
     private static final String TAG = "SearchListAdapter";
     private Activity activity;
-    private BackgroundAudioService backgroundAudioService;
+    private ContentRecommendationsFragment.OnFragmentInteractionListener listener;
 
     public SearchListAdapter(Activity activity,
                              int resource,
                              List<APISearch.ItemJSON> items,
-                             BackgroundAudioService backgroundAudioService) {
+                             ContentRecommendationsFragment.OnFragmentInteractionListener listener) {
         super(activity, resource, items);
         this.activity = activity;
-        this.backgroundAudioService = backgroundAudioService;
+        this.listener = listener;
     }
 
     @Override
@@ -50,7 +49,7 @@ public class SearchListAdapter extends ArrayAdapter<APISearch.ItemJSON> {
                         convertView,
                         item.ifTypeAudio,
                         activity,
-                        backgroundAudioService
+                        listener
                 );
                 break;
             case aggregation:
@@ -65,7 +64,7 @@ public class SearchListAdapter extends ArrayAdapter<APISearch.ItemJSON> {
                         aggregationJSON,
                         activity,
                         showList,
-                        backgroundAudioService
+                        listener
                 );
                 break;
         }

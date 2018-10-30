@@ -14,7 +14,7 @@ import android.widget.TextView;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.APIAggregations;
-import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
+import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.TileDialogFragment;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.AggregationsCache;
@@ -28,14 +28,14 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
     private List<APIRecommendations.ItemJSON> itemsJSON;
     private Context context;
     private Activity activity;
-    private BackgroundAudioService backgroundAudioService;
+    private ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener;
 
     public RecommendationsAdapter(List<APIRecommendations.ItemJSON> itemsJSON, Activity activity,
-                                  BackgroundAudioService backgroundAudioService) {
+                                  ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
         this.itemsJSON = itemsJSON;
         this.context = activity.getApplicationContext();
         this.activity = activity;
-        this.backgroundAudioService = backgroundAudioService;
+        this.onFragmentInteractionListener = onFragmentInteractionListener;
     }
 
     @NonNull
@@ -72,7 +72,7 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                         //create dialog to add audio
                         TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(
                                 itemJSON,
-                                backgroundAudioService,
+                                onFragmentInteractionListener,
                                 aggregationsData.data
                         );
                         if (tileDialogFragment == null) {
@@ -87,7 +87,7 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                 //create dialog to add audio
                 TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(
                         itemJSON,
-                        backgroundAudioService,
+                        onFragmentInteractionListener,
                         null);
                 tileDialogFragment.show(activity.getFragmentManager(), "tiledialog");
             }

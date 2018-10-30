@@ -20,19 +20,18 @@ public class ContentPageAdapter extends FragmentPagerAdapter {
     private BackgroundAudioService backgroundAudioService;
     private ContentQueueFragment currentContentQueueFragment;
 
-    public ContentPageAdapter(FragmentManager fm, BackgroundAudioService backgroundAudioService) {
+    public ContentPageAdapter(FragmentManager fm) {
         super(fm);
-        this.backgroundAudioService = backgroundAudioService;
     }
 
     @Override
     public Fragment getItem(int position) {
         //Grab the recommendations fragment if position is 0
         if (position == 0) {
-            return ContentRecommendationsFragment.newInstance(backgroundAudioService);
+            return ContentRecommendationsFragment.newInstance();
         }
         //Grab the content queue if position is anything else
-        currentContentQueueFragment = ContentQueueFragment.newInstance(backgroundAudioService);
+        currentContentQueueFragment = ContentQueueFragment.newInstance();
         return currentContentQueueFragment;
     }
 

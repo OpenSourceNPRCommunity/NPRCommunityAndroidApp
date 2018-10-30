@@ -2,11 +2,11 @@ package com.nprcommunity.npronecommunity.Background;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.v4.media.session.MediaSessionCompat;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MediaQueueManager {
@@ -28,16 +28,16 @@ public class MediaQueueManager {
         }
     }
 
-    public List<APIRecommendations.ItemJSON> getMediaQueue() {
+    public List<MediaSessionCompat.QueueItem> getMediaQueue() {
         synchronized (lock) {
-            return new ArrayList<>(lineUpQueue.getQueue());
+            return lineUpQueue.getQueue();
         }
     }
 
     protected int getMediaIndex(@NonNull APIRecommendations.ItemJSON queueItem) {
-        List<APIRecommendations.ItemJSON> itemJSONS = lineUpQueue.getQueue();
+        List<MediaSessionCompat.QueueItem> itemJSONS = lineUpQueue.getQueue();
         for (int i = 0; i < itemJSONS.size(); i++) {
-            if (itemJSONS.get(i).href.equals(queueItem.href)) {
+            if (itemJSONS.get(i).getDescription().getMediaId().equals(queueItem.href)) {
                 return i;
             }
         }
@@ -56,14 +56,14 @@ public class MediaQueueManager {
      */
     public APIRecommendations.ItemJSON peekNextTrack() {
         synchronized (lock) {
-            APIRecommendations.ItemJSON queueItem = lineUpQueue.peek();
+            MediaSessionCompat.QueueItem queueItem = lineUpQueue.peek();
             if (queueItem != null) {
-                return queueItem;
+                return (APIRecommendations.ItemJSON) queueItem.getDescription().getExtras()
+                        .getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
             }
             return null;
         }
     }
-
     public int queueSize() {
         synchronized (lock) {
             return lineUpQueue.size();
@@ -94,7 +94,7 @@ public class MediaQueueManager {
                 return false;
             }
             for (int i = 0; i < lineUpQueue.size(); i++) {
-                if (lineUpQueue.getQueueItem(i).href.equals(queueItem.href)) {
+                if (lineUpQueue.getQueueItem(i).getDescription().getMediaId().equals(queueItem.href)) {
                     return false;
                 }
             }
@@ -102,9 +102,16 @@ public class MediaQueueManager {
         }
     }
 
-    public APIRecommendations.ItemJSON getQueueTrack(int position) {
+    public MediaSessionCompat.QueueItem getQueueTrack(int position) {
         synchronized (lock) {
             return lineUpQueue.getQueueItem(position);
+        }
+    }
+
+    public APIRecommendations.ItemJSON getAPIQueueTrack(int position) {
+        synchronized (lock) {
+            return (APIRecommendations.ItemJSON) lineUpQueue.getQueueItem(position).getDescription().
+                    getExtras().getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
         }
     }
 

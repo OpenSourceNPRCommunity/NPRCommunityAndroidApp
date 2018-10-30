@@ -2,10 +2,12 @@ package com.nprcommunity.npronecommunity.Background;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.Shared;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.DownloadPoolExecutor;
 import com.nprcommunity.npronecommunity.Store.DownloadMediaTask;
@@ -16,7 +18,6 @@ import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -29,32 +30,30 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 public class MediaQueueDownloadManager implements MediaQueueChangedListener {
     private final String TAG = "QUEUEDOWNLOADMANAGER";
     private final MediaQueueManager mediaQueueManager;
-    private final Observable observable;
+    private final MediaSessionCompat mediaSessionCompat;
     private final FileCache fileCache;
     private final Context context;
     private final Map<String, ThreadListener> threadListeners = new HashMap<>();
     private final ConcurrentMap<String, DownloadMediaTask> downloadTasks = new ConcurrentHashMap<>();
     private final Object lockThreadListener = new Object();
     private final Object lockDownloadTasks = new Object();
-    private final BackgroundAudioService backgroundAudioService;
 
     protected MediaQueueDownloadManager(MediaQueueManager mediaQueueManager,
-                                        Observable observable,
+                                        MediaSessionCompat mediaSessionCompat,
                                         FileCache fileCache,
-                                        Context context,
-                                        BackgroundAudioService backgroundAudioService) {
+                                        Context context) {
         this.mediaQueueManager = mediaQueueManager;
-        this.observable = observable;
+        this.mediaSessionCompat = mediaSessionCompat;
         this.fileCache = fileCache;
         this.context = context;
-        this.backgroundAudioService = backgroundAudioService;
         setupQueueDownloads();
     }
 
     private void setupQueueDownloads() {
-        List<APIRecommendations.ItemJSON> itemJSONList = mediaQueueManager.getMediaQueue();
+        List<MediaSessionCompat.QueueItem> itemJSONList = mediaQueueManager.getMediaQueue();
         for (int i = 0; i < itemJSONList.size(); i++) {
-            APIRecommendations.ItemJSON itemJSON = itemJSONList.get(i);
+            APIRecommendations.ItemJSON itemJSON = (APIRecommendations.ItemJSON) itemJSONList.get(i)
+                    .getDescription().getExtras().getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
             APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
             Shared.Progress progress = audioJSON.progressTracker;
             if (!progress.isFullyDownloaded()) {
@@ -76,7 +75,10 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                         BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
                         itemJSON.href
                 );
-                observable.notifyObservers(bundleMediaProgress);
+                mediaSessionCompat.sendSessionEvent(
+                        BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                        bundleMediaProgress
+                );
                 startDownload(i,itemJSON);
             }
         }
@@ -122,7 +124,10 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                     BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
                     itemJSON.href
             );
-            observable.notifyObservers(bundleMediaProgress);
+            mediaSessionCompat.sendSessionEvent(
+                    BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                    bundleMediaProgress
+            );
         };
 
         DownloadMediaTask downloadMediaTask = fileCache.getAudio(
@@ -216,7 +221,10 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                         BackgroundAudioService.ActionExtras.MEDIA_ERROR_LOADING_REMOVE_ITEM.name(),
                         itemJSON
                 );
-                observable.notifyObservers(bundleMediaError);
+                mediaSessionCompat.sendSessionEvent(
+                        BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
+                        bundleMediaError
+                );
             }
         }
     }

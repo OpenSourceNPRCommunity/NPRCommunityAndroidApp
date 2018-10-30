@@ -16,23 +16,15 @@ import com.nprcommunity.npronecommunity.R;
 
 public class ContentViewPagerFragmentHolder extends Fragment {
 
-//    private OnFragmentInteractionListener mListener;
-
-    private BackgroundAudioService backgroundAudioService;
     private ContentPageAdapter contentPageAdapter;
+//    private OnFragmentInteractionListener listener;
 
     public ContentViewPagerFragmentHolder() {}
 
-    public static ContentViewPagerFragmentHolder newInstance(BackgroundAudioService backgroundAudioService) {
+    public static ContentViewPagerFragmentHolder newInstance() {
         ContentViewPagerFragmentHolder contentViewPagerFragmentHolder =
                 new ContentViewPagerFragmentHolder();
-        contentViewPagerFragmentHolder.setFragmentManager(backgroundAudioService);
         return contentViewPagerFragmentHolder;
-    }
-
-    public void setFragmentManager(BackgroundAudioService backgroundAudioService) {
-        //inflate content page adapter
-        this.backgroundAudioService = backgroundAudioService;
     }
 
     public ContentPageAdapter getContentPageAdapter() {
@@ -51,9 +43,7 @@ public class ContentViewPagerFragmentHolder extends Fragment {
         View view = inflater.inflate(R.layout.content_view_pager_holder_fragment,
                 container, false);
         if (contentPageAdapter == null) {
-            contentPageAdapter = new ContentPageAdapter(
-                    getChildFragmentManager(),
-                    backgroundAudioService);
+            contentPageAdapter = new ContentPageAdapter(getChildFragmentManager());
         } else {
             contentPageAdapter.notifyDataSetChanged();
         }
@@ -61,18 +51,11 @@ public class ContentViewPagerFragmentHolder extends Fragment {
         return view;
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-//        if (mListener != null) {
-//            mListener.onFragmentInteraction(uri);
-//        }
-    }
-
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
 //        if (context instanceof OnFragmentInteractionListener) {
-//            mListener = (OnFragmentInteractionListener) context;
+//            listener = (OnFragmentInteractionListener) context;
 //        } else {
 //            throw new RuntimeException(context.toString()
 //                    + " must implement OnFragmentInteractionListener");
@@ -82,10 +65,10 @@ public class ContentViewPagerFragmentHolder extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-//        mListener = null;
+//        listener = null;
     }
 
-    public interface OnFragmentInteractionListener {
-        void onFragmentInteraction(Uri uri);
-    }
+//    public interface OnFragmentInteractionListener {
+//        void onFragmentInteraction(Uri uri);
+//    }
 }

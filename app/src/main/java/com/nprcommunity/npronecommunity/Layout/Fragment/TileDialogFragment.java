@@ -9,6 +9,7 @@ import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,7 +31,7 @@ import java.util.Observer;
 
 public class TileDialogFragment extends DialogFragment implements Observer {
 
-    private BackgroundAudioService backgroundAudioService;
+    private ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener;
     private static String ARG_QUEUE_ITEM = "QUEUE_ITEM",
                             ARG_AFFILIATIONS = "AFFILIATIONS",
                             ARG_HAS_AFFILIATIONS = "HAS_AFFILIATIONS";
@@ -40,7 +41,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
     private View dialogView;
 
     public static TileDialogFragment newInstance(@NonNull APIRecommendations.ItemJSON itemJSON,
-                                                 @NonNull BackgroundAudioService backgroundAudioService,
+                                                 @NonNull ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener,
                                                  APIAggregations.AggregationJSON aggregationJSON) {
 
         TileDialogFragment fragment = new TileDialogFragment();
@@ -52,15 +53,14 @@ public class TileDialogFragment extends DialogFragment implements Observer {
         } else {
             args.putBoolean(ARG_HAS_AFFILIATIONS, false);
         }
-        fragment.setBackgroundAudioService(backgroundAudioService);
+        fragment.setFragmentListener(onFragmentInteractionListener);
 
         fragment.setArguments(args);
         return fragment;
     }
 
-    private void setBackgroundAudioService(BackgroundAudioService backgroundAudioService) {
-        this.backgroundAudioService = backgroundAudioService;
-        backgroundAudioService.addObserver(this);
+    private void setFragmentListener(ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
+        this.onFragmentInteractionListener = onFragmentInteractionListener;
     }
 
 
@@ -116,7 +116,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
         builder.setView(dialogView);
         Dialog dialog = builder.create();
 
-        setupNonAffiliationsComponents(dialogView, queueItem, getActivity(), backgroundAudioService);
+        setupNonAffiliationsComponents(dialogView, queueItem, getActivity(), onFragmentInteractionListener);
 
         dialogView.findViewById(R.id.dialog_single_button_close).setOnClickListener((View v) -> {
             dialog.cancel();
@@ -128,7 +128,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
     public static void setupNonAffiliationsComponents(@NonNull View view,
                                                       @NonNull APIRecommendations.ItemJSON queueItem,
                                                       @NonNull Activity activity,
-                                                      @NonNull BackgroundAudioService backgroundAudioService) {
+                                                      @NonNull ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
         //setup unique href id for this row item
         ((TextView)view.findViewById(R.id.dialog_single_href_id))
                 .setText(queueItem.href);
@@ -144,17 +144,17 @@ public class TileDialogFragment extends DialogFragment implements Observer {
                 view.findViewById(R.id.dialog_single_button_add_to_queue),
                 queueItem,
                 activity,
-                backgroundAudioService
+                onFragmentInteractionListener
         );
 
         //set play now button
         setPlayNowButton(
                 view.findViewById(R.id.dialog_single_button_play_now),
                 queueItem,
-                !queueItem.href.equals(backgroundAudioService.getMediaHref()),
+                !queueItem.href.equals(onFragmentInteractionListener.getMediaHref()),
                 view.findViewById(R.id.dialog_single_button_add_to_queue),
                 activity,
-                backgroundAudioService
+                onFragmentInteractionListener
         );
     }
 
@@ -175,7 +175,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
         tileRecommendationsList = dialogView.findViewById(R.id.dialog_multi_show_list);
 
         setupAffiliationsComponents(dialogView, aggregationJSON, getActivity(),
-                tileRecommendationsList, backgroundAudioService);
+                tileRecommendationsList, onFragmentInteractionListener);
 
         return dialog;
     }
@@ -184,7 +184,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
                                                    @NonNull APIAggregations.AggregationJSON aggregationJSON,
                                                    @NonNull Activity activity,
                                                    @NonNull LinearLayout recommendationsList,
-                                                   @NonNull BackgroundAudioService backgroundAudioService) {
+                                                   @NonNull ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
         //setup dialog shows info
         ((TextView)view.findViewById(R.id.dialog_multi_show_title)).setText(
                 aggregationJSON.attributes.getTitle()
@@ -253,17 +253,17 @@ public class TileDialogFragment extends DialogFragment implements Observer {
                     recommendation.findViewById(R.id.dialog_row_button_add_to_queue),
                     tmpQueueItem,
                     activity,
-                    backgroundAudioService
+                    onFragmentInteractionListener
             );
 
             //set play now button
             setPlayNowButton(
                     recommendation.findViewById(R.id.dialog_row_button_play_now),
                     tmpQueueItem,
-                    !tmpQueueItem.href.equals(backgroundAudioService.getMediaHref()),
+                    !tmpQueueItem.href.equals(onFragmentInteractionListener.getMediaHref()),
                     recommendation.findViewById(R.id.dialog_row_button_add_to_queue),
                     activity,
-                    backgroundAudioService
+                    onFragmentInteractionListener
             );
         }
     }
@@ -271,12 +271,12 @@ public class TileDialogFragment extends DialogFragment implements Observer {
     private static void setAddToQueueButton(Button addToQueue,
                                             APIRecommendations.ItemJSON queueItem,
                                             Activity activity,
-                                            BackgroundAudioService backgroundAudioService) {
+                                            ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
         //setup the queue if enabled
         setAddToQueueEnabled(addToQueue, queueItem, activity);
 
         addToQueue.setOnClickListener((View v) -> {
-            backgroundAudioService.addToQueue(queueItem);
+            onFragmentInteractionListener.addToQueue(queueItem);
             Button button = (Button) v;
             button.setEnabled(false);
             String checked = activity.getString(R.string.checkmark)
@@ -316,9 +316,9 @@ public class TileDialogFragment extends DialogFragment implements Observer {
                                          boolean enabled,
                                          Button addToQueue,
                                          Activity activity,
-                                         BackgroundAudioService backgroundAudioService) {
+                                         ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
         playNow.setOnClickListener((View v) -> {
-            backgroundAudioService.playMediaNow(queueItem);
+            onFragmentInteractionListener.playMediaNow(queueItem);
             playNow.setEnabled(false);
             setAddToQueueEnabled(addToQueue, queueItem, activity);
         });
@@ -328,9 +328,9 @@ public class TileDialogFragment extends DialogFragment implements Observer {
     private static boolean existsInQueue(@NonNull APIRecommendations.ItemJSON queueItem,
                                         @NonNull Activity activity) {
         //get the count of recommendations so far to add checkmarks
-        for (APIRecommendations.ItemJSON itemJSON :
+        for (MediaSessionCompat.QueueItem itemJSON :
                 MediaQueueManager.getInstance(activity).getMediaQueue()) {
-            if (itemJSON.href.equals(queueItem.href)) {
+            if (itemJSON.getDescription().getMediaId().equals(queueItem.href)) {
                 return true;
             }
         }
@@ -340,7 +340,6 @@ public class TileDialogFragment extends DialogFragment implements Observer {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        backgroundAudioService.removeObserver(this);
     }
 
     @Override
@@ -353,7 +352,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
                 final String lastMediaHref = ((Bundle)arg).getString(
                         BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()
                 );
-                final String currentTileHref = backgroundAudioService.getMediaHref();
+                final String currentTileHref = onFragmentInteractionListener.getMediaHref();
                 if (hasAffiliations) {
                     final int childCount = tileRecommendationsList.getChildCount();
                     for (int i = 0; i < childCount; i++) {

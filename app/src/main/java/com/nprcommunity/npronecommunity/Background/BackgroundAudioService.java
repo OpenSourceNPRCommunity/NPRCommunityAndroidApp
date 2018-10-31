@@ -1,5 +1,7 @@
 package com.nprcommunity.npronecommunity.Background;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -82,6 +84,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             isCompleted = false;
     private static final Object lock = new Object();
     private volatile boolean loadingLineUp = false;
+    private boolean foregroundStarted = false;
 
     private final int MAX_AUDIO_LEVEL = 100;
 
@@ -199,11 +202,17 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         @Override
         public void onRewind() {
             super.onRewind();
-            mediaQueueManager.forceSaveQueue();
+            seekMedia(getMediaCurrentPosition() -(int)(10*Util.MILLI_SECOND));
+        }
+
+        @Override
+        public void onStop() {
+            super.onStop();
+            pauseMedia();
+            stopForeground(true);
+            BackgroundAudioService.this.stopSelf();
         }
     };
-
-    // TODO TODO remove ContentQueuePlayingListener class
 
     /**
      * Actions used for cross communication between frontend
@@ -331,6 +340,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mediaQueueManager.forceSaveQueue();
         setMediaPlaybackState(PlaybackStateCompat.STATE_STOPPED);
         unregisterReceiver(noisyReceiver);
         if (mediaPlayer != null) {
@@ -431,10 +441,15 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         PlaybackStateCompat.Builder playbackstateBuilder = new PlaybackStateCompat.Builder();
         if (state == PlaybackStateCompat.STATE_PLAYING) {
             playbackstateBuilder.setActions(
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PAUSE);
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PAUSE |
+                    PlaybackStateCompat.ACTION_REWIND | PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                    PlaybackStateCompat.ACTION_STOP);
         } else {
             playbackstateBuilder.setActions(
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PLAY);
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PLAY |
+                    PlaybackStateCompat.ACTION_REWIND | PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                    PlaybackStateCompat.ACTION_STOP
+            );
         }
 
         Bundle bundle = new Bundle();
@@ -450,27 +465,97 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
     private void showPlayingNotification() {
         MediaStyleHelper mediaStyleHelper = new MediaStyleHelper();
-        NotificationCompat.Builder builder = mediaStyleHelper.from(this, mediaSessionCompat);
+        NotificationCompat.Builder builder = mediaStyleHelper.from(mediaSessionCompat);
         if (builder == null) {
             return;
         }
 
-        builder.addAction(new NotificationCompat.Action(android.R.drawable.ic_media_pause, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)));
-        builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0).setMediaSession(mediaSessionCompat.getSessionToken()));
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_replay_10_white_40dp,
+                        getString(R.string.rewind),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_REWIND
+                        )
+                )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                R.drawable.ic_pause_white_24dp,
+                getString(R.string.pause),
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        this, PlaybackStateCompat.ACTION_PLAY_PAUSE
+                )
+            )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_skip_next_white_24dp,
+                        getString(R.string.next),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                        )
+                )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_close_white_24dp,
+                        getString(R.string.close),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_STOP
+                        )
+                )
+        );
+        builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().
+                setShowActionsInCompactView(1, 2).setMediaSession(mediaSessionCompat.getSessionToken()));
         builder.setSmallIcon(R.mipmap.ic_launcher);
+        builder.setOngoing(true);
+        if (!foregroundStarted) {
+            startForeground(1, builder.build());
+            foregroundStarted = true;
+        }
         NotificationManagerCompat.from(this).notify(1, builder.build());
     }
 
     private void showPausedNotification() {
         MediaStyleHelper mediaStyleHelper = new MediaStyleHelper();
-        NotificationCompat.Builder builder = mediaStyleHelper.from(this, mediaSessionCompat);
+        NotificationCompat.Builder builder = mediaStyleHelper.from(mediaSessionCompat);
         if (builder == null) {
             return;
         }
 
-        builder.addAction(new NotificationCompat.Action(android.R.drawable.ic_media_play, "Play", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)));
-        builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0).setMediaSession(mediaSessionCompat.getSessionToken()));
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_replay_10_white_40dp,
+                        getString(R.string.rewind),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_REWIND
+                        )
+                )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_play_arrow_white_24dp,
+                        getString(R.string.pause),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_PLAY_PAUSE
+                        )
+                )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_skip_next_white_24dp,
+                        getString(R.string.next),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                        )
+                )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_close_white_24dp,
+                        getString(R.string.close),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_STOP
+                        )
+                )
+        );
+        builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
+                .setShowActionsInCompactView(1, 2).setMediaSession(mediaSessionCompat.getSessionToken()));
         builder.setSmallIcon(R.mipmap.ic_launcher);
+        builder.setOngoing(false);
         NotificationManagerCompat.from(this).notify(1, builder.build());
     }
 
@@ -526,27 +611,23 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     }
 
     public class MediaStyleHelper {
-        public NotificationCompat.Builder from(
-                Context context, MediaSessionCompat mediaSession) {
-            //TODO TODO cleanup
-            MediaControllerCompat controller = mediaSession.getController();
-            MediaMetadataCompat mediaMetadata = controller.getMetadata();
-            MediaDescriptionCompat description = mediaMetadata.getDescription();
+        public NotificationCompat.Builder from(MediaSessionCompat mediaSession) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel("default",
+                        getString(R.string.app_name),
+                        NotificationManager.IMPORTANCE_DEFAULT);
+                channel.setDescription(getString(R.string.app_name));
+                ((NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE))
+                        .createNotificationChannel(channel);
+            }
+            MediaControllerCompat controllerCompat = mediaSession.getController();
+            MediaDescriptionCompat description = controllerCompat.getMetadata().getDescription();
 
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
-            builder
+            return new NotificationCompat.Builder(getApplicationContext(), "default")
                     .setContentTitle(description.getTitle())
-                    .setContentText(description.getSubtitle())
-                    .setSubText(description.getDescription())
-                    .setLargeIcon(description.getIconBitmap())
-                    .setContentIntent(controller.getSessionActivity())
-                    .setDeleteIntent(
-                            MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                    context,
-                                    PlaybackStateCompat.ACTION_STOP)
-                    )
+                    .setContentIntent(controllerCompat.getSessionActivity())
+                    .setAutoCancel(false)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-            return builder;
         }
     }
 
@@ -566,7 +647,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             synchronized (lock) {
                 mediaPlayer.seekTo(seekVal);
             }
-            setMediaPlaybackState(PlaybackState.STATE_FAST_FORWARDING);
         }
     }
 
@@ -580,9 +660,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 if (mediaPlayer.isPlaying()) {
                     mediaPlayer.pause();
                     isPlaying = false;
+                    setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
+                    showPausedNotification();
                 }
-                setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                showPausedNotification();
             }
         } else {
             Log.d(TAG, "pauseMedia: media player is null");
@@ -712,10 +792,15 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         isPrepared = true;
         isCompleted = false;
 
+        //update the position, if previously saved
+        if (currentMedia != null) {
+            seekMedia(currentMedia.attributes.rating.elapsed * 1000);
+        }
+
         //if the play media is not set, then do not attempt to play media...
         if (!playMedia) {
             //call to update frontend and proper media features
-            pauseMedia();
+            setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
         } else {
             //play the media
             playMedia();
@@ -1002,6 +1087,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         new Thread(() -> {
             int lastSeek = getMediaCurrentPosition()/1000;
             int currentSeek;
+            int i = 0;
             while(true) {
                 currentSeek = getMediaCurrentPosition();
                 if (currentSeek/1000 != lastSeek) {

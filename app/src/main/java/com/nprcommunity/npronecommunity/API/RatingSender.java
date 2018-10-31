@@ -101,8 +101,6 @@ public class RatingSender {
                             Log.e(TAG, "sendAsyncRating: recommendations is null");
                         }
                     }
-
-                    response.parseAsString();
                 } catch (IOException e) {
                     Log.e(TAG, "sendAsyncRating", e);
                 }

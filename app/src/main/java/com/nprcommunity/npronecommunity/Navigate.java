@@ -392,7 +392,8 @@ public class Navigate extends AppCompatActivity
                     getSupportFragmentManager().popBackStack();
                     v.animate().rotation(360).start();
                 } else {
-                    //todo error out
+                    Log.e(TAG, "setupMediaButtons: Error stack is: " +
+                            getSupportFragmentManager().getBackStackEntryCount());
                 }
             }
         });

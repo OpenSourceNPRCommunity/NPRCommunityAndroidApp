@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.ResultReceiver;
@@ -50,7 +51,6 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.SEND_RATING_TIMEOUT;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.SWAP;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.PLAY_MEDIA_NOW_QUEUE_ITEM;
-import static com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue.ApiItem.API_ITEM;
 
 /**
  * Thanks to  Paul Trebilcox-Ruiz tutorial for helping with all the media compat android stuff.
@@ -69,7 +69,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     private final String TAG = "BACKGROUNDAUDIOSERVICE";
     private MediaPlayer mediaPlayer;
     private MediaQueueManager mediaQueueManager;
-    private APIRecommendations.ItemJSON currentMedia;
+    private APIRecommendations.ItemJSON currentMedia,
+            lastMedia;
     private FileCache fileCache;
     private AudioManager audioManager;
     private SettingsAndTokenManager settingsAndTokenManager;
@@ -140,9 +141,17 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             } else if (REMOVE_INDEX.name().equals(command)) {
                 remove(extras.getInt(CommandCompatExtras.REMOVE_INDEX_I.name()));
             } else if (REMOVE_ITEM.name().equals(command)) {
-                remove((APIRecommendations.ItemJSON) extras.getSerializable(
+                int removed = remove((APIRecommendations.ItemJSON) extras.getSerializable(
                         CommandCompatExtras.REMOVE_ITEM_OBJECT.name()
                     )
+                );
+                Bundle bundleRemoved = new Bundle();
+                bundleRemoved.putString(ACTION, Action.MEDIA_REMOVED.name());
+                bundleRemoved.putInt(BackgroundAudioService.ActionExtras.MEDIA_REMOVED_I.name(),
+                        removed);
+                mediaSessionCompat.sendSessionEvent(
+                        BackgroundAudioService.Action.MEDIA_REMOVED.name(),
+                        bundleRemoved
                 );
             } else if (ADD_ITEM.name().equals(command)) {
                 addToQueue((APIRecommendations.ItemJSON) extras.getSerializable(
@@ -200,28 +209,24 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
      * Actions used for cross communication between frontend
      */
     public enum Action {
-        PAUSE_BUTTON,
-        PLAY_BUTTON,
-        SEEK_BUTTON,
-        MEDIA_TITLE,
-        MEDIA_NEXT,
-        SEEK_CHANGE,
-        MEDIA_PREPARED,
         MEDIA_ADDED_TO_QUEUE,
         MEDIA_DOWNLOADING_PROGRESS,
         MEDIA_ERROR_LOADING,
         MEDIA_COMPLETE,
+        SEEK_CHANGE,
+        MEDIA_REMOVED
     }
 
     /**
      * Extra information used in the Bundles for Action
      */
     public enum ActionExtras {
-        MEDIA_PREPARED_HREF,
-        MEDIA_PREPARED_IS_SKIPPABLE,
         MEDIA_ERROR_LOADING_REMOVE_ITEM,
         MEDIA_NEXT_LAST_MEDIA_HREF,
         MEDIA_NEXT_IS_SKIPPABLE,
+        MEDIA_PREPARED_HREF,
+        MEDIA_REMOVED_I,
+        MEDIA_NEXT_ADDED_HREF
     }
 
     public enum CommandCompat {
@@ -312,6 +317,13 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 SettingsAndTokenManager.SettingsKey.AUTO_PLAY_ENABLED,
                 true)) {
             nextMedia(true);
+        } else {
+            Bundle bundleComplete = new Bundle();
+            bundleComplete.putString(ACTION, Action.MEDIA_COMPLETE.name());
+            mediaSessionCompat.sendSessionEvent(
+                    BackgroundAudioService.Action.MEDIA_COMPLETE.name(),
+                    bundleComplete
+            );
         }
     }
 
@@ -424,7 +436,15 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             playbackstateBuilder.setActions(
                     PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PLAY);
         }
-        playbackstateBuilder.setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0);
+
+        Bundle bundle = new Bundle();
+        bundle.putString(BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name(),
+                lastMedia == null ? "" : lastMedia.href);
+        playbackstateBuilder.setExtras(bundle);
+        playbackstateBuilder.setState(state,
+                currentMedia == null ? 0 : currentMedia.attributes.rating.elapsed * 1000,
+                0
+        );
         mediaSessionCompat.setPlaybackState(playbackstateBuilder.build());
     }
 
@@ -464,22 +484,20 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     BitmapFactory.decodeResource(getResources(), R.drawable.blank_image));
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
                     BitmapFactory.decodeResource(getResources(), R.drawable.blank_image));
-
             //lock screen icon for pre lollipop
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,
                     BitmapFactory.decodeResource(getResources(), R.drawable.blank_image));
-
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     currentMedia.attributes.audioTitle);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,
                     currentMedia.attributes.description);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
-
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, getMediaDuration());
-
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT,
                     isMediaSkippable() ? 1 : 0);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID,
+                    currentMedia.href);
         } else {
             //Notification icon in card
             //TODO TODO metadata icon
@@ -487,11 +505,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-
             //lock screen icon for pre lollipop
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-
             String unknown = "UNKNWON";
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     unknown);
@@ -499,14 +515,11 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     unknown);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
-
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, getMediaDuration());
-
-            metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT,
-                    isMediaSkippable() ? 1 : 0);
-
-            metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, getMediaImage().href);
+            metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT, 0);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "");
         }
+
 
         //TODO TODO more metadata options
         mediaSessionCompat.setMetadata(metadataBuilder.build());
@@ -553,6 +566,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             synchronized (lock) {
                 mediaPlayer.seekTo(seekVal);
             }
+            setMediaPlaybackState(PlaybackState.STATE_FAST_FORWARDING);
         }
     }
 
@@ -566,9 +580,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 if (mediaPlayer.isPlaying()) {
                     mediaPlayer.pause();
                     isPlaying = false;
-                    setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                    showPausedNotification();
                 }
+                setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
+                showPausedNotification();
             }
         } else {
             Log.d(TAG, "pauseMedia: media player is null");
@@ -612,6 +626,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 AudioManager.AUDIOFOCUS_GAIN);
         switch (result) {
             case AudioManager.AUDIOFOCUS_REQUEST_GRANTED:
+                // set media session metadata again
+                setMediaSessionMetadata();
+
                 mediaSessionCompat.setActive(true);
                 synchronized (lock) {
                     mediaPlayer.start();
@@ -695,23 +712,14 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         isPrepared = true;
         isCompleted = false;
 
-        //send update to all observers
-        Bundle bundleMediaPrepared = new Bundle();
-        bundleMediaPrepared.putString(ACTION, BackgroundAudioService.Action.MEDIA_PREPARED.name());
-        bundleMediaPrepared.putBoolean(
-                BackgroundAudioService.ActionExtras.MEDIA_PREPARED_IS_SKIPPABLE.name(),
-                currentMedia.attributes.isSkippable()
-        );
-        mediaSessionCompat.sendSessionEvent(
-                BackgroundAudioService.Action.MEDIA_PREPARED.name(),
-                bundleMediaPrepared
-        );
-
         //if the play media is not set, then do not attempt to play media...
         if (!playMedia) {
-            return;
+            //call to update frontend and proper media features
+            pauseMedia();
+        } else {
+            //play the media
+            playMedia();
         }
-        requestAudioFocusAndPlay();
     }
 
     @Override
@@ -722,7 +730,13 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     }
 
     @Override
-    public void onSeekComplete(MediaPlayer mp) {}
+    public void onSeekComplete(MediaPlayer mp) {
+        if (isPlaying) {
+            setMediaPlaybackState(PlaybackState.STATE_PLAYING);
+        } else {
+            setMediaPlaybackState(PlaybackState.STATE_PAUSED);
+        }
+    }
 
     private float getVolume(int level) {
         if (level > MAX_AUDIO_LEVEL) {
@@ -775,10 +789,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //set is prepared to false
             isPrepared = false;
 
-            //set the state for the frontend
-            setMediaPlaybackState(PlaybackStateCompat.STATE_BUFFERING);
-
-            APIRecommendations.ItemJSON lastMedia = currentMedia;
+            lastMedia = currentMedia;
 
             //Remove last track
             if (currentMedia != null && removeTrack) {
@@ -801,40 +812,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //sets the metadata for this next track
             setMediaSessionMetadata();
 
-            //send update to all observers
-            Bundle bundleMediaNext = new Bundle();
-            bundleMediaNext.putString(ACTION, BackgroundAudioService.Action.MEDIA_NEXT.name());
-            bundleMediaNext.putBooleanArray(
-                    BackgroundAudioService.Action.MEDIA_NEXT.name(),
-                    /**
-                     * [0] has media
-                     * [1] has next media
-                     */
-                    new boolean[]{
-                            hasMedia(),
-                            hasNextMedia()
-                    }
-            );
-            if (currentMedia != null) {
-                bundleMediaNext.putBoolean(
-                        BackgroundAudioService.ActionExtras.MEDIA_NEXT_IS_SKIPPABLE.name(),
-                        currentMedia.attributes.skippable
-                );
-            }
-
-            if (lastMedia != null && removeTrack) {
-                //if the last track was not null and the a track was removed
-                //then send the media next last href as a part of the next
-                bundleMediaNext.putString(
-                        BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name(),
-                        lastMedia.href
-                );
-            }
-
-            mediaSessionCompat.sendSessionEvent(
-                    BackgroundAudioService.Action.MEDIA_NEXT.name(),
-                    bundleMediaNext
-            );
+            setMediaPlaybackState(PlaybackState.STATE_SKIPPING_TO_NEXT);
 
             //grab next media if <= 2 songs
             if (mediaQueueManager.queueSize() <= minimalQueueSize) {
@@ -891,23 +869,16 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                             fileInputStream.getFD()
                     );
                     if (prepareAndPlay) {
-                        mediaPlayer.prepareAsync();
                         playMedia = true;
-                    } else if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
+                        currentMedia = itemJSON;
                         mediaPlayer.prepareAsync();
+                    } else if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
                         playMedia = false;
+                        mediaPlayer.prepareAsync();
                     }
                 }
-                Bundle bundleMediaTitle = new Bundle();
-                bundleMediaTitle.putString(ACTION, BackgroundAudioService.Action.MEDIA_TITLE.name());
-                bundleMediaTitle.putString(
-                        BackgroundAudioService.Action.MEDIA_TITLE.name(),
-                        currentMedia.attributes.title
-                );
-                mediaSessionCompat.sendSessionEvent(
-                        BackgroundAudioService.Action.MEDIA_TITLE.name(),
-                        bundleMediaTitle
-                );
+                setMediaSessionMetadata();
+                setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
             } catch (IOException e) {
                 Log.e(TAG, "nextMediaHelper: setting data source [" +
                         currentMedia + "]", e);
@@ -967,6 +938,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     private int getMediaDuration() {
         if (isPrepared) {
             return mediaPlayer.getDuration();
+        } else if (currentMedia != null) {
+            return currentMedia.attributes.duration * 1000;
         }
         return 0;
     }
@@ -976,10 +949,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             return mediaPlayer.getCurrentPosition();
         }
         return 0;
-    }
-
-    public boolean getIsPlaying() {
-        return isPlaying;
     }
 
     public boolean addToQueue(APIRecommendations.ItemJSON queueItem) {
@@ -1004,6 +973,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                         hasNextMedia()
                 }
         );
+        bundleMediaAdd.putString(ActionExtras.MEDIA_NEXT_ADDED_HREF.name(), queueItem.href);
         mediaSessionCompat.sendSessionEvent(
                 BackgroundAudioService.Action.MEDIA_ADDED_TO_QUEUE.name(),
                 bundleMediaAdd
@@ -1036,6 +1006,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 currentSeek = getMediaCurrentPosition();
                 if (currentSeek/1000 != lastSeek) {
                     lastSeek = currentSeek/1000;
+                    //update elapsed
+                    currentMedia.attributes.rating.elapsed = currentSeek/1000;
                     Bundle bundleMediaSeek = new Bundle();
                     bundleMediaSeek.putString(ACTION, BackgroundAudioService.Action.SEEK_CHANGE.name());
                     bundleMediaSeek.putInt(
@@ -1046,8 +1018,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                             BackgroundAudioService.Action.SEEK_CHANGE.name(),
                             bundleMediaSeek
                     );
-                    //update elapsed
-                    currentMedia.attributes.rating.elapsed = currentSeek/1000;
                 }
                 try {
                     Thread.sleep(250);

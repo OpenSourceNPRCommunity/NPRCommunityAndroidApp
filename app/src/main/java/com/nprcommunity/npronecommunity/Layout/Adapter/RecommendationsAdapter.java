@@ -22,6 +22,7 @@ import com.nprcommunity.npronecommunity.Store.FileCache;
 
 import java.io.FileInputStream;
 import java.util.List;
+import java.util.Observable;
 
 public class RecommendationsAdapter extends RecyclerView.Adapter<RecommendationsAdapter.ViewHolder> {
     private String TAG = "RecommendationsAdapter";
@@ -29,13 +30,16 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
     private Context context;
     private Activity activity;
     private ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener;
+    private Observable tileObservable;
 
     public RecommendationsAdapter(List<APIRecommendations.ItemJSON> itemsJSON, Activity activity,
-                                  ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener) {
+                                  ContentRecommendationsFragment.OnFragmentInteractionListener onFragmentInteractionListener,
+                                  Observable tileObservable) {
         this.itemsJSON = itemsJSON;
         this.context = activity.getApplicationContext();
         this.activity = activity;
         this.onFragmentInteractionListener = onFragmentInteractionListener;
+        this.tileObservable = tileObservable;
     }
 
     @NonNull
@@ -73,7 +77,8 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                         TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(
                                 itemJSON,
                                 onFragmentInteractionListener,
-                                aggregationsData.data
+                                aggregationsData.data,
+                                tileObservable
                         );
                         if (tileDialogFragment == null) {
                             Log.e(TAG, "onBindViewHolder: error null");
@@ -88,7 +93,8 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                 TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(
                         itemJSON,
                         onFragmentInteractionListener,
-                        null);
+                        null,
+                        tileObservable);
                 tileDialogFragment.show(activity.getFragmentManager(), "tiledialog");
             }
         });

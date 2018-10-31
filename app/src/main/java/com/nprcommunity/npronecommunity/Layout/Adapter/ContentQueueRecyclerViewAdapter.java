@@ -99,10 +99,7 @@ public class ContentQueueRecyclerViewAdapter
         if (tmpQueueItem.attributes.skippable) {
             //only enable if skippable
             holder.closeImageButton.setOnClickListener((View v) -> {
-                int removedIndex = listener.remove(tmpQueueItem);
-                if (removedIndex >= 0) {
-                    notifyItemRemoved(removedIndex);
-                }
+                listener.remove(tmpQueueItem);
             });
         } else {
             //hide button else
@@ -122,12 +119,7 @@ public class ContentQueueRecyclerViewAdapter
     }
 
     public void removeItem(APIRecommendations.ItemJSON itemJSON) {
-        int position = listener.remove(itemJSON);
-        if (position >= 0) {
-            notifyItemRemoved(position);
-        } else {
-            Log.e(TAG, "removeItem: could not remove item [" + itemJSON + "]");
-        }
+        listener.remove(itemJSON);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

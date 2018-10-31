@@ -34,7 +34,7 @@ public class MediaQueueManager {
         }
     }
 
-    protected int getMediaIndex(@NonNull APIRecommendations.ItemJSON queueItem) {
+    public int getMediaIndex(@NonNull APIRecommendations.ItemJSON queueItem) {
         List<MediaSessionCompat.QueueItem> itemJSONS = lineUpQueue.getQueue();
         for (int i = 0; i < itemJSONS.size(); i++) {
             if (itemJSONS.get(i).getDescription().getMediaId().equals(queueItem.href)) {

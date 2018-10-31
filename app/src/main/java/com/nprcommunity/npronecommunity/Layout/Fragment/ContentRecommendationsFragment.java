@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -25,6 +26,7 @@ import com.nprcommunity.npronecommunity.Store.CacheStructures.RecommendationCach
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Observable;
 
 
 public class ContentRecommendationsFragment extends Fragment {
@@ -32,13 +34,19 @@ public class ContentRecommendationsFragment extends Fragment {
     private static String TAG = "LAYOUT.FRAGMENT.CONTENTRECOMMENDATIONSFRAGMENT";
 
     private OnFragmentInteractionListener listener;
+    private Observable tileObservable;
 
     public ContentRecommendationsFragment() {
         // Required empty public constructor
     }
 
-    public static ContentRecommendationsFragment newInstance() {
+    public void setTileObservable(Observable tileObservable) {
+        this.tileObservable = tileObservable;
+    }
+
+    public static ContentRecommendationsFragment newInstance(Observable tileObservable) {
         ContentRecommendationsFragment fragment = new ContentRecommendationsFragment();
+        fragment.setTileObservable(tileObservable);
         return fragment;
     }
 
@@ -105,9 +113,14 @@ public class ContentRecommendationsFragment extends Fragment {
 
                 //Grabs the linear layout where the APIRecommendations are stored
                 LinearLayout navigateRootLayout = activity.findViewById(R.id.content_recommendations);
-
+                if (navigateRootLayout == null) {
+                    return;
+                }
                 //inflates the custom APIRecommendations row (where the 'tiles' are kept)
                 View recommendationRowView = View.inflate(activity, R.layout.recomendations_row, null);
+                if (recommendationRowView == null) {
+                    return;
+                }
 
                 //sets text for the APIRecommendations row image
                 ((TextView)(recommendationRowView.findViewById(R.id.recommendations_tile_text)))
@@ -138,7 +151,8 @@ public class ContentRecommendationsFragment extends Fragment {
                     RecommendationsAdapter tmpRecommendationsAdapter = new RecommendationsAdapter(
                             ((APIRecommendations.RecommendationsJSON)recommendationsData.data).items,
                             activity,
-                            listener);
+                            listener,
+                            tileObservable);
                     tmpView.setAdapter(tmpRecommendationsAdapter);
                 }
             }

@@ -1,23 +1,29 @@
 package com.nprcommunity.npronecommunity.Layout.Fragment;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
 import android.support.v4.view.ViewPager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentPageAdapter;
 import com.nprcommunity.npronecommunity.R;
+
+import java.util.Observable;
 
 public class ContentViewPagerFragmentHolder extends Fragment {
 
     private ContentPageAdapter contentPageAdapter;
 //    private OnFragmentInteractionListener listener;
+    private Observable observable = new Observable() {
+        @Override
+        public void notifyObservers(Object arg) {
+            setChanged();
+            super.notifyObservers(arg);
+        }
+    };
 
     public ContentViewPagerFragmentHolder() {}
 
@@ -43,12 +49,16 @@ public class ContentViewPagerFragmentHolder extends Fragment {
         View view = inflater.inflate(R.layout.content_view_pager_holder_fragment,
                 container, false);
         if (contentPageAdapter == null) {
-            contentPageAdapter = new ContentPageAdapter(getChildFragmentManager());
+            contentPageAdapter = new ContentPageAdapter(getChildFragmentManager(), observable);
         } else {
             contentPageAdapter.notifyDataSetChanged();
         }
         ((ViewPager)view.findViewById(R.id.content_pager)).setAdapter(contentPageAdapter);
         return view;
+    }
+
+    public void updateTiles(String lastHref) {
+        observable.notifyObservers(lastHref);
     }
 
     @Override

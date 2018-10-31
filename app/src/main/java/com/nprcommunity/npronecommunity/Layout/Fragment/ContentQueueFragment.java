@@ -128,7 +128,7 @@ public class ContentQueueFragment extends Fragment {
 
     public interface OnListFragmentInteractionListener {
         void remove(int position);
-        int remove(APIRecommendations.ItemJSON itemJSON);
+        void remove(APIRecommendations.ItemJSON itemJSON);
         void swap(int fromPosition, int toPosition);
     }
 }

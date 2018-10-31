@@ -12,7 +12,6 @@ import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
-import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -45,13 +44,18 @@ import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 import java.util.List;
 
 import static android.support.v4.media.session.PlaybackStateCompat.STATE_BUFFERING;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_CONNECTING;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_ERROR;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_FAST_FORWARDING;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_NONE;
 import static android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED;
 import static android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_REWINDING;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_SKIPPING_TO_NEXT;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_SKIPPING_TO_QUEUE_ITEM;
+import static android.support.v4.media.session.PlaybackStateCompat.STATE_STOPPED;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.ACTION;
-import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.Action.PAUSE_BUTTON;
-import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.Action.PLAY_BUTTON;
-import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.ActionExtras.MEDIA_NEXT_IS_SKIPPABLE;
-import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.ActionExtras.MEDIA_PREPARED_IS_SKIPPABLE;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.PLAY_MEDIA_NOW;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.ADD_ITEM_OBJECT;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.PLAY_MEDIA_NOW_QUEUE_ITEM;
@@ -97,17 +101,114 @@ public class Navigate extends AppCompatActivity
                 return;
             }
 
+            ContentQueueRecyclerViewAdapter adapter = null;
+            ContentQueueFragment contentQueueFragment = null;
+            if (contentViewPagerFragmentHolder != null) {
+                ContentPageAdapter contentPageAdapter = contentViewPagerFragmentHolder.getContentPageAdapter();
+                if (contentPageAdapter != null) {
+                    contentQueueFragment = contentPageAdapter.getCurrentContentQueueFragment();
+                    if (contentQueueFragment != null) {
+                        adapter = (ContentQueueRecyclerViewAdapter) contentQueueFragment.getQueueAdapter();
+                    }
+                }
+            }
+
             switch (state.getState()) {
-                //TODO TODO migrate backend to use state for all changes instead of onSessionEvent()
                 case STATE_PLAYING:
-                    Bundle bundlePlay = new Bundle();
-                    bundlePlay.putString(ACTION, PAUSE_BUTTON.name());
-                    updateAction(bundlePlay);
+                    buttonPausePlay.setEnabled(true);
+                    buttonRewind.setEnabled(true);
+                    setButtonNext();
+                    swapPlayLoading(false);
+                    contentMediaPlayerFragment.enableSeekBar(true);
+
+                    buttonPausePlay.setBackground(getDrawable(R.drawable.ic_pause_white_24dp));
+                    contentViewPagerFragmentHolder.updateTiles(state.getExtras().getString(
+                            BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()));
                     break;
                 case STATE_PAUSED:
-                    Bundle bundlePause = new Bundle();
-                    bundlePause.putString(ACTION, PLAY_BUTTON.name());
-                    updateAction(bundlePause);
+                    buttonPausePlay.setEnabled(true);
+                    buttonRewind.setEnabled(true);
+                    setButtonNext();
+                    swapPlayLoading(false);
+                    contentMediaPlayerFragment.enableSeekBar(true);
+
+                    buttonPausePlay.setBackground(getDrawable(R.drawable.ic_play_arrow_white_24dp));
+                    break;
+                case STATE_BUFFERING:
+                    //update more information fragment
+                    //NOTE! must be before enableSeekBar() call below... method overwrites it
+                    contentMediaPlayerFragment.updateMedia();
+
+                    buttonPausePlay.setEnabled(false);
+                    buttonRewind.setEnabled(false);
+                    setButtonNext();
+                    swapPlayLoading(true);
+                    contentMediaPlayerFragment.enableSeekBar(false);
+
+                    if (mediaControllerCompat.getQueue().size() == 0) {
+                        // if it has media
+                        currentMediaTextView.setText(R.string.nothing_to_play);
+                    }
+
+                    //set the current title
+                    currentMediaTextView.setText(
+                            mediaControllerCompat.getMetadata().getDescription().getTitle()
+                    );
+
+                    // update adapter about buffering change... may be loading in a new media
+                    if (adapter != null) {
+                        adapter.notifyDataSetChanged();
+                    }
+                    contentViewPagerFragmentHolder.updateTiles(state.getExtras().getString(
+                            BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()));
+                    break;
+                case STATE_SKIPPING_TO_NEXT:
+                    //update more information fragment
+                    //NOTE! must be before enableSeekBar() call below... method overwrites it
+                    contentMediaPlayerFragment.updateMedia();
+
+                    buttonPausePlay.setEnabled(false);
+                    buttonRewind.setEnabled(false);
+                    setButtonNext();
+                    swapPlayLoading(true);
+                    contentMediaPlayerFragment.enableSeekBar(false);
+
+                    if (mediaControllerCompat.getQueue().size() == 0) {
+                        // if it has media
+                        currentMediaTextView.setText(R.string.nothing_to_play);
+                        contentMediaPlayerFragment.clearData();
+                    }
+
+                    // update adapter about buffering change... may be loading in a new media
+                    if (adapter != null) {
+                        adapter.notifyDataSetChanged();
+                    }
+                    contentViewPagerFragmentHolder.updateTiles(state.getExtras().getString(
+                            BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()));
+                    break;
+                case STATE_SKIPPING_TO_QUEUE_ITEM:
+                    throw new Error("Not implemented");
+                case STATE_CONNECTING:
+                    Log.w(TAG, "onPlaybackStateChanged: STATE_CONNECTING not implemented");
+                    break;
+                case STATE_ERROR:
+                    Log.w(TAG, "onPlaybackStateChanged: STATE_ERROR not implemented");
+                    break;
+                case STATE_STOPPED:
+                    Log.w(TAG, "onPlaybackStateChanged: STATE_STOPPED not implemented");
+                    break;
+                case STATE_NONE:
+                    Log.w(TAG, "onPlaybackStateChanged: STATE_NONE not implemented");
+                    break;
+                case STATE_SKIPPING_TO_PREVIOUS:
+                    Log.w(TAG, "onPlaybackStateChanged: STATE_NONE not implemented");
+                    break;
+                case STATE_REWINDING: // act as same as fast forward, just update where we are at
+                case STATE_FAST_FORWARDING:
+                    contentMediaPlayerFragment.setSeek(
+                            (int)state.getPosition(),
+                            true
+                    );
                     break;
             }
         }
@@ -122,10 +223,6 @@ public class Navigate extends AppCompatActivity
                 mediaControllerCompat = new MediaControllerCompat(Navigate.this, mediaBrowserCompat.getSessionToken());
                 mediaControllerCompat.registerCallback(mediaControllerCompatCallback);
                 MediaControllerCompat.setMediaController(Navigate.this, mediaControllerCompat);
-                //TODO THIS media controller to play
-//                MediaControllerCompat.getMediaController(Navigate.this).
-//                        getTransportControls().playFromMediaId(String.valueOf(R.raw.warner_tautz_off_broadway), null);
-
 
                 //setup content page adapter
                 contentViewPagerFragmentHolder = ContentViewPagerFragmentHolder.newInstance();
@@ -146,14 +243,10 @@ public class Navigate extends AppCompatActivity
 
                 //set the next button and play button
                 buttonPausePlay.setEnabled(
-                        mediaControllerCompat.getPlaybackState().getState() == STATE_BUFFERING
+                        mediaControllerCompat.getPlaybackState().getState() == STATE_PAUSED ||
+                            mediaControllerCompat.getPlaybackState().getState() == STATE_PLAYING
                 );
-                if (Navigate.this.isMediaSkippable()) {
-                    //if it is skippable then we check if has next media
-                    buttonNext.setEnabled(Navigate.this.hasNextMedia());
-                } else {
-                    buttonNext.setEnabled(false);
-                }
+                setButtonNext();
 
             } catch (RemoteException e) {
                 Log.e(TAG, "onConnected: error connecting to remote", e);
@@ -161,8 +254,8 @@ public class Navigate extends AppCompatActivity
         }
     };
 
-    private boolean hasNextMedia() {
-        return mediaControllerCompat.getQueue().size() > 1;
+    private void setButtonNext() {
+        buttonNext.setEnabled(mediaControllerCompat.getQueue().size() > 1 && isMediaSkippable());
     }
 
     @Override
@@ -204,6 +297,8 @@ public class Navigate extends AppCompatActivity
         };
         drawer.addDrawerListener(toggle);
         toggle.syncState();
+
+        contentMediaPlayerFragment = ContentMediaPlayerFragment.newInstance();
 
         //setup auto play button action
         Switch autoPlayEnableSwitch = navigationView.getMenu().findItem(R.id.nav_auto_play)
@@ -280,9 +375,7 @@ public class Navigate extends AppCompatActivity
 
             if (isButtonMediaMax) {
                 // Create fragment
-                if (contentMediaPlayerFragment == null) {
-                    contentMediaPlayerFragment = ContentMediaPlayerFragment.newInstance();
-                }
+                contentMediaPlayerFragment = ContentMediaPlayerFragment.newInstance();
 
                 //make transaction to replace current fragment
                 //thanks to https://stackoverflow.com/a/40895000/5522992 for some help
@@ -425,17 +518,6 @@ public class Navigate extends AppCompatActivity
             }
         }
         switch (action) {
-            case PLAY_BUTTON:
-                buttonPausePlay.setBackground(getDrawable(R.drawable.ic_play_arrow_white_24dp));
-                break;
-            case PAUSE_BUTTON:
-                buttonPausePlay.setBackground(getDrawable(R.drawable.ic_pause_white_24dp));
-                break;
-            case MEDIA_TITLE:
-                currentMediaTextView.setText(
-                        bundle.getString(BackgroundAudioService.Action.MEDIA_TITLE.name())
-                );
-                break;
             case MEDIA_ERROR_LOADING:
                 Toast.makeText(
                         getApplicationContext(),
@@ -456,54 +538,12 @@ public class Navigate extends AppCompatActivity
                         null
                 );
                 break;
-            case MEDIA_NEXT:
-                boolean[] bools = bundle.getBooleanArray(
-                        BackgroundAudioService.Action.MEDIA_NEXT.name()
-                );
-                /*
-                 * [0] has media
-                 * [1] has next media
-                 */
-                if (bools != null && bools.length == 2) {
-                    if (bools[0]) {
-                        swapPlayLoading(true);
-                    } else {
-                        currentMediaTextView.setText(R.string.nothing_to_play);
-                        swapPlayLoading(false);
-                    }
-
-                    if (bundle.getBoolean(MEDIA_NEXT_IS_SKIPPABLE.name(), true)) {
-                        //if it is skippable then load in whatever information is needed for this
-                        buttonPausePlay.setEnabled(bools[0]);
-                        buttonNext.setEnabled(bools[1]);
-                    } else {
-                        //if not skipplable then set button pause and button next to false
-                        buttonPausePlay.setEnabled(true);
-                        buttonNext.setEnabled(false);
-                    }
-                }
-                if (contentMediaPlayerFragment != null) {
-                    contentMediaPlayerFragment.updateMedia();
-                }
-                //Gets the
-                if (adapter != null) {
-                    adapter.notifyDataSetChanged();
-                }
-                break;
             case SEEK_CHANGE:
                 if (contentMediaPlayerFragment != null) {
                     contentMediaPlayerFragment.setSeek(
                             bundle.getInt(BackgroundAudioService.Action.SEEK_CHANGE.name()),
                             true
                     );
-                }
-                break;
-            case MEDIA_PREPARED:
-                swapPlayLoading(false);
-                buttonPausePlay.setEnabled(true);
-                buttonNext.setEnabled(bundle.getBoolean(MEDIA_PREPARED_IS_SKIPPABLE.name(), true));
-                if (contentMediaPlayerFragment != null) {
-                    contentMediaPlayerFragment.updateMedia();
                 }
                 break;
             case MEDIA_ADDED_TO_QUEUE:
@@ -528,6 +568,10 @@ public class Navigate extends AppCompatActivity
                 if (adapter != null) {
                     adapter.notifyDataSetChanged();
                 }
+                contentViewPagerFragmentHolder.updateTiles(bundle.getString(
+                        BackgroundAudioService.ActionExtras.MEDIA_NEXT_ADDED_HREF.name(),
+                        ""
+                ));
                 break;
             case MEDIA_DOWNLOADING_PROGRESS:
                 int[] downloadProgressInts = bundle.getIntArray(
@@ -582,9 +626,15 @@ public class Navigate extends AppCompatActivity
                 }
                 break;
             case MEDIA_COMPLETE:
-                //re-enable button next for users without auto play
+                //re-enable button next for users without auto play and if skippable is disabled
                 if (!buttonNext.isEnabled()) {
                     buttonNext.setEnabled(true);
+                }
+                buttonPausePlay.setBackground(getDrawable(R.drawable.ic_play_arrow_white_24dp));
+                break;
+            case MEDIA_REMOVED:
+                if (adapter != null) {
+                    adapter.notifyDataSetChanged();
                 }
                 break;
         }
@@ -610,26 +660,19 @@ public class Navigate extends AppCompatActivity
     }
 
     @Override
-    public int remove(APIRecommendations.ItemJSON itemJSON) {
-        List<MediaSessionCompat.QueueItem> tmpQueueList = mediaControllerCompat.getQueue();
-        for (int i = 0; i < tmpQueueList.size(); i++) {
-            if (tmpQueueList.get(i).getDescription().getMediaId().equals(itemJSON.href)) {
-                Bundle bundleRemove = new Bundle();
-                bundleRemove.putSerializable(REMOVE_ITEM_OBJECT.name(), itemJSON);
-                mediaControllerCompat.sendCommand(
-                        BackgroundAudioService.CommandCompat.REMOVE_ITEM.name(),
-                        bundleRemove, null);
-                return i;
-            }
-        }
-        return -1;
+    public void remove(APIRecommendations.ItemJSON itemJSON) {
+        Bundle bundleRemove = new Bundle();
+        bundleRemove.putSerializable(REMOVE_ITEM_OBJECT.name(), itemJSON);
+        mediaControllerCompat.sendCommand(
+                BackgroundAudioService.CommandCompat.REMOVE_ITEM.name(),
+                bundleRemove, null);
     }
 
     @Override
     public void swap(int fromPosition, int toPosition) {
         Bundle bundleSwap = new Bundle();
         bundleSwap.putInt(SWAP_POS_ONE.name(), fromPosition);
-        bundleSwap.putInt(SWAP_POS_TWO.name(), fromPosition);
+        bundleSwap.putInt(SWAP_POS_TWO.name(), toPosition);
         mediaControllerCompat.sendCommand(BackgroundAudioService.CommandCompat.SWAP.name(),
                 bundleSwap, null);
     }
@@ -692,10 +735,10 @@ public class Navigate extends AppCompatActivity
 
     @Override
     public void addToQueue(APIRecommendations.ItemJSON queueItem) {
-        Bundle bundleSwap = new Bundle();
-        bundleSwap.putSerializable(ADD_ITEM_OBJECT.name(), queueItem);
+        Bundle bundleAddToQueue = new Bundle();
+        bundleAddToQueue.putSerializable(ADD_ITEM_OBJECT.name(), queueItem);
         mediaControllerCompat.sendCommand(BackgroundAudioService.CommandCompat.ADD_ITEM.name(),
-                bundleSwap, null);
+                bundleAddToQueue, null);
     }
 
     @Override

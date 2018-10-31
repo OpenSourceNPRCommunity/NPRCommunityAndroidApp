@@ -20,15 +20,6 @@ import com.nprcommunity.npronecommunity.Util;
 
 import java.io.FileInputStream;
 
-
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link ContentMediaPlayerFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link ContentMediaPlayerFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class ContentMediaPlayerFragment extends Fragment {
 
     private static String TAG = "CONTENTMEDIAPLAYERFRAGMENT";
@@ -62,7 +53,7 @@ public class ContentMediaPlayerFragment extends Fragment {
         mediaPlayerSeekBarTextCenter = view.findViewById(R.id.media_player_seek_bar_text_center);
         mediaPlayerSeekBarTextRight = view.findViewById(R.id.media_player_seek_bar_text_right);
         mediaPlayerSeekBar = view.findViewById(R.id.media_player_seek_bar);
-        mediaPlayerSeekBar.setMax(listener.getDuration());
+        mediaPlayerSeekBar.setMax(listener == null ? 0 : listener.getDuration());
         mediaPlayerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -80,7 +71,9 @@ public class ContentMediaPlayerFragment extends Fragment {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                listener.seekMedia(seekBar.getProgress());
+                if (listener != null) {
+                    listener.seekMedia(seekBar.getProgress());
+                }
                 setSeek(seekBar.getProgress(), false);
                 mediaPlayerSeekBarTextCenter.setVisibility(View.INVISIBLE);
             }
@@ -107,16 +100,51 @@ public class ContentMediaPlayerFragment extends Fragment {
         }
     }
 
+    public void enableSeekBar(boolean bool) {
+        if (mediaPlayerSeekBar != null) {
+            mediaPlayerSeekBar.setEnabled(bool);
+        }
+    }
+
+    public void clearData() {
+        if (mediaPlayerSeekBarTextLeft != null) {
+            mediaPlayerSeekBarTextLeft.setText(
+                    Util.millisecondToHoursMinutesSeconds(0)
+            );
+        }
+
+        if (mediaPlayerSeekBarTextRight != null) {
+            mediaPlayerSeekBarTextRight.setText(
+                    Util.millisecondToHoursMinutesSeconds(0)
+            );
+        }
+
+        if (mediaPlayerTitle != null) {
+            mediaPlayerTitle.setText(R.string.nothing_to_play);
+        }
+        if (mediaPlayerDesc != null) {
+            mediaPlayerDesc.setText("");
+        }
+        if (mediaPlayerImageView != null ){
+            mediaPlayerImageView.setImageResource(R.mipmap.ic_launcher);
+        }
+
+        if (mediaPlayerSeekBar != null) {
+            mediaPlayerSeekBar.setEnabled(false);
+            mediaPlayerSeekBar.setMax(0);
+        }
+    }
+
     public void updateMedia() {
         if (mediaPlayerSeekBarTextLeft != null) {
             mediaPlayerSeekBarTextLeft.setText(
                     Util.millisecondToHoursMinutesSeconds(
-                            listener.getCurrentPosition()
+                            listener == null ? 0 : listener.getCurrentPosition()
                     )
             );
         }
 
-        long duration = listener.getDuration();
+        long duration = listener == null ? 0 : listener.getDuration();
 
         if (mediaPlayerSeekBarTextRight != null) {
             mediaPlayerSeekBarTextRight.setText(
@@ -125,47 +153,55 @@ public class ContentMediaPlayerFragment extends Fragment {
         }
 
         if (mediaPlayerTitle != null) {
-            mediaPlayerTitle.setText(listener.getMediaDescription().getTitle());
+            if (listener != null) {
+                mediaPlayerTitle.setText(listener.getMediaDescription().getTitle());
+            } else {
+                mediaPlayerTitle.setText(R.string.nothing_to_play);
+            }
         }
         if (mediaPlayerDesc != null) {
-            mediaPlayerDesc.setText(listener.getMediaDescription().getDescription());
+            mediaPlayerDesc.setText(
+                    listener == null ? "" : listener.getMediaDescription().getDescription()
+            );
         }
         if (mediaPlayerImageView != null ){
             setMediaPicture();
         }
 
         if (mediaPlayerSeekBar != null) {
-            mediaPlayerSeekBar.setEnabled(listener.isMediaSkippable());
+            mediaPlayerSeekBar.setEnabled(listener == null || listener.isMediaSkippable());
             mediaPlayerSeekBar.setMax((int)duration);
         }
     }
 
     private void setMediaPicture() {
         mediaPlayerImageView.setImageResource(R.drawable.blank_image);
-        FileCache fileCache = FileCache.getInstances(this.getContext());
-        String hrefImage = listener.getMediaImage();
-        //if the image is not a drawable (aka the media has its own image, then we load it)
-        if (hrefImage != null) {
-            fileCache.getImage(
-                    hrefImage,
-                    (FileInputStream fileInputStream, String url) -> {
-                        if (fileInputStream == null) {
-                            //TODO: put up blank image
-                            Log.e(TAG, "onServiceConnected: failed " +
-                                    "to get image. Check out other logs");
-                        } else {
-                            mediaPlayerImageView.setImageBitmap(
-                                    BitmapFactory.decodeStream(fileInputStream)
-                            );
+        if (listener != null) {
+            FileCache fileCache = FileCache.getInstances(this.getContext());
+            String hrefImage = listener.getMediaImage();
+            //if the image is not a drawable (aka the media has its own image, then we load it)
+            if (hrefImage != null) {
+                fileCache.getImage(
+                        hrefImage,
+                        (FileInputStream fileInputStream, String url) -> {
+                            if (fileInputStream == null) {
+                                //TODO: put up blank image
+                                Log.e(TAG, "onServiceConnected: failed " +
+                                        "to get image. Check out other logs");
+                            } else {
+                                mediaPlayerImageView.setImageBitmap(
+                                        BitmapFactory.decodeStream(fileInputStream)
+                                );
+                            }
+                        },
+                        (int progress, int total, int speed) -> {
+                            Log.d(TAG, "nextMediaHelper: progress loading image content player: "
+                                    + hrefImage + " at "
+                                    + " progress [" + progress + "] total [" + total + "] "
+                                    + " percent [" + ((double)progress)/((double)total));
                         }
-                    },
-                    (int progress, int total, int speed) -> {
-                        Log.d(TAG, "nextMediaHelper: progress loading image content player: "
-                            + hrefImage + " at "
-                            + " progress [" + progress + "] total [" + total + "] "
-                            + " percent [" + ((double)progress)/((double)total));
-                    }
-            );
+                );
+            }
         }
     }
 

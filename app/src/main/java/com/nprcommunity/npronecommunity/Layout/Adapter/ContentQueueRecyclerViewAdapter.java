@@ -21,6 +21,7 @@ import com.nprcommunity.npronecommunity.Layout.Callback.ItemTouchHelperListener;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment.OnListFragmentInteractionListener;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Util;
 
 import java.io.FileInputStream;
 
@@ -61,7 +62,7 @@ public class ContentQueueRecyclerViewAdapter
         holder.titleView.setText(tmpQueueItem.attributes.audioTitle);
         holder.hrefView.setText(tmpQueueItem.href);
 
-        holder.imageView.setImageResource(R.mipmap.ic_launcher);
+        holder.imageView.setImageResource(R.drawable.if_radio_scaled_600);
         if (tmpQueueItem.links.hasImage()) {
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(this.context);
@@ -90,10 +91,15 @@ public class ContentQueueRecyclerViewAdapter
         if (tmpQueueItem.links.getValidAudio().progressTracker.isFullyDownloaded()) {
             //finished downloading setup the view
             holder.progressSpeed.setVisibility(View.GONE);
-            //TODO replace all 100% Downloaded (there are two of them) with R.string...
-            String percentage = "100% Downloaded";
+            String percentage = context.getString(R.string.one_hundred_pecent_downloaded);
             holder.progressPercent.setText(percentage);
             holder.progressBar.setVisibility(View.GONE);
+        } else {
+            //else
+            holder.progressSpeed.setText(Util.getBytesPerSecString(0));
+            holder.progressSpeed.setVisibility(View.VISIBLE);
+            holder.progressPercent.setText("0%");
+            holder.progressBar.setVisibility(View.VISIBLE);
         }
 
         //setup on close

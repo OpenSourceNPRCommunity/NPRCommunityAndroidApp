@@ -566,7 +566,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
             //set default image
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
-                        BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+                        BitmapFactory.decodeResource(getResources(), R.drawable.if_radio_scaled_600));
             // load in actual image
             fileCache.getImage(
                     currentMedia.href,
@@ -1117,7 +1117,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                             BackgroundAudioService.Action.SEEK_CHANGE.name(),
                             bundleMediaSeek
                     );
-                    setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING);
+                    if (isPlaying) {
+                        setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING);
+                    }
                 }
                 try {
                     Thread.sleep(250);

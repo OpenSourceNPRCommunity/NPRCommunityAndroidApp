@@ -197,7 +197,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
         );
 
         ImageView imageView = view.findViewById(R.id.dialog_multi_show_image);
-        imageView.setImageResource(R.mipmap.ic_launcher);
+        imageView.setImageResource(R.drawable.if_radio_scaled_600);
 
         if (aggregationJSON.links.hasImage()) {
             //only run if has an image

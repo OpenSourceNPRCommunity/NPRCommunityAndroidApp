@@ -127,7 +127,7 @@ public class ContentMediaPlayerFragment extends Fragment {
             mediaPlayerDesc.setText("");
         }
         if (mediaPlayerImageView != null ){
-            mediaPlayerImageView.setImageResource(R.mipmap.ic_launcher);
+            mediaPlayerImageView.setImageResource(R.drawable.if_radio_scaled_600);
         }
 
         if (mediaPlayerSeekBar != null) {
@@ -181,7 +181,7 @@ public class ContentMediaPlayerFragment extends Fragment {
     }
 
     private void setMediaPicture() {
-        mediaPlayerImageView.setImageResource(R.mipmap.ic_launcher);
+        mediaPlayerImageView.setImageResource(R.drawable.if_radio_scaled_600);
         if (listener != null) {
             FileCache fileCache = FileCache.getInstances(this.getContext());
             String hrefImage = listener.getMediaImage();

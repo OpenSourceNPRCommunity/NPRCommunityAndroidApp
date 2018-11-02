@@ -591,7 +591,7 @@ public class Navigate extends AppCompatActivity
                                 String speed = Util.getBytesPerSecString(downloadProgressInts[1]);
                                 tmpView.findViewById(R.id.queue_progress_speed)
                                         .setVisibility(View.GONE);
-                                String percent = "100% Downloaded";
+                                String percent = getString(R.string.one_hundred_pecent_downloaded);
                                 ((TextView)tmpView.findViewById(R.id.queue_progress_percent)).setText(
                                         percent
                                 );

@@ -197,7 +197,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
         );
 
         ImageView imageView = view.findViewById(R.id.dialog_multi_show_image);
-        imageView.setImageResource(R.drawable.blank_image);
+        imageView.setImageResource(R.mipmap.ic_launcher);
 
         if (aggregationJSON.links.hasImage()) {
             //only run if has an image
@@ -345,7 +345,6 @@ public class TileDialogFragment extends DialogFragment implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
-        final String lastMediaHref = (String)arg;
         final String currentTileHref = onFragmentInteractionListener.getMediaHref();
         if (hasAffiliations) {
             final int childCount = tileRecommendationsList.getChildCount();

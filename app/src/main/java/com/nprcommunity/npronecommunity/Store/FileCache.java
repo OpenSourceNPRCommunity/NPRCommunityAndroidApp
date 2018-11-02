@@ -359,14 +359,21 @@ public class FileCache {
                     count += len;
                     end = System.nanoTime();
                     if ((end-start)/MILLI_SECOND_IN_NANO >= MILLI_NOTIFY) {
-                        progressCallback.updateProgress(count, total,
-                                (count - prevProgress)*(1000/MILLI_NOTIFY));
+                        if (progressCallback != null) {
+                            progressCallback.updateProgress(
+                                    count,
+                                    total,
+                                    (count - prevProgress)*(1000/MILLI_NOTIFY)
+                            );
+                        }
                         start = end;
                         prevProgress = count;
                     }
                 }
                 //set finished to download
-                progressCallback.updateProgress(total, total, 0);
+                if (progressCallback != null) {
+                    progressCallback.updateProgress(total, total, 0);
+                }
             } finally {
                 if (fileLock != null) {
                     fileLock.release();

@@ -137,15 +137,19 @@ public class ContentMediaPlayerFragment extends Fragment {
     }
 
     public void updateMedia() {
+        int progress = 0;
+        int duration = 0;
+        if (listener != null) {
+            progress = listener.getCurrentPosition();
+            duration = listener.getDuration();
+        }
         if (mediaPlayerSeekBarTextLeft != null) {
             mediaPlayerSeekBarTextLeft.setText(
                     Util.millisecondToHoursMinutesSeconds(
-                            listener == null ? 0 : listener.getCurrentPosition()
+                            progress
                     )
             );
         }
-
-        long duration = listener == null ? 0 : listener.getDuration();
 
         if (mediaPlayerSeekBarTextRight != null) {
             mediaPlayerSeekBarTextRight.setText(
@@ -170,13 +174,14 @@ public class ContentMediaPlayerFragment extends Fragment {
         }
 
         if (mediaPlayerSeekBar != null) {
-            mediaPlayerSeekBar.setEnabled(listener == null || listener.isMediaSkippable());
-            mediaPlayerSeekBar.setMax((int)duration);
+            mediaPlayerSeekBar.setEnabled(listener != null && listener.isMediaSkippable());
+            mediaPlayerSeekBar.setMax(duration);
+            mediaPlayerSeekBar.setProgress(progress);
         }
     }
 
     private void setMediaPicture() {
-        mediaPlayerImageView.setImageResource(R.drawable.blank_image);
+        mediaPlayerImageView.setImageResource(R.mipmap.ic_launcher);
         if (listener != null) {
             FileCache fileCache = FileCache.getInstances(this.getContext());
             String hrefImage = listener.getMediaImage();
@@ -186,14 +191,14 @@ public class ContentMediaPlayerFragment extends Fragment {
                         hrefImage,
                         (Bitmap bitmap) -> {
                             if (bitmap == null) {
-                                Log.e(TAG, "onServiceConnected: failed " +
+                                Log.e(TAG, "setMediaPicture: failed " +
                                         "to get image. Check out other logs");
                             } else {
                                 mediaPlayerImageView.setImageBitmap(bitmap);
                             }
                         },
                         (int progress, int total, int speed) -> {
-                            Log.d(TAG, "nextMediaHelper: progress loading image content player: "
+                            Log.d(TAG, "setMediaPicture: progress loading image content player: "
                                     + hrefImage + " at "
                                     + " progress [" + progress + "] total [" + total + "] "
                                     + " percent [" + ((double)progress)/((double)total));

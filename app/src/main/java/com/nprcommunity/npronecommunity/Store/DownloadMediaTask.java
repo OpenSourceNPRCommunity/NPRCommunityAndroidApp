@@ -72,19 +72,20 @@ public class DownloadMediaTask implements Runnable{
                 }
                 urlInputStream = urlConnection.getInputStream();
             } catch (MalformedURLException e) {
-                Log.e(TAG, "doInBackground: malformed url stream [" + url + "] type [" +
+                Log.e(TAG, "getFileInputStream: malformed url stream [" + url + "] type [" +
                         type.name() + "]", e);
                 return null;
             } catch (IOException e) {
-                Log.e(TAG, "doInBackground: url stream", e);
+                Log.e(TAG, "getFileInputStream: url stream", e);
                 return null;
             }
             try {
                 //save file to correct type
                 cacheInputStream = cache.saveFile(url, urlInputStream, type,
                         progressCallback, total, stopDownload);
+                Log.i(TAG, "getFileInputStream: successfully saved file: " + url);
             } catch (FileNotFoundException e) {
-                Log.e(TAG, "doInBackground: save file", e);
+                Log.e(TAG, "getFileInputStream: save file", e);
                 return null;
             }
         } else {
@@ -93,7 +94,7 @@ public class DownloadMediaTask implements Runnable{
                 cacheInputStream = cache.getInputStream(url, type);
             } catch (FileNotFoundException e) {
                 //failed to find file: should not happen
-                Log.e(TAG, "doInBackground: failed to get data although exists", e);
+                Log.e(TAG, "getFileInputStream: failed to get data although exists", e);
                 return null;
             }
         }

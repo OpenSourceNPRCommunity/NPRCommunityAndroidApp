@@ -122,8 +122,6 @@ public class Navigate extends AppCompatActivity
                     contentMediaPlayerFragment.enableSeekBar(true);
 
                     buttonPausePlay.setBackground(getDrawable(R.drawable.ic_pause_white_24dp));
-                    contentViewPagerFragmentHolder.updateTiles(state.getExtras().getString(
-                            BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()));
                     break;
                 case STATE_PAUSED:
                     buttonPausePlay.setEnabled(true);
@@ -159,8 +157,7 @@ public class Navigate extends AppCompatActivity
                     if (adapter != null) {
                         adapter.notifyDataSetChanged();
                     }
-                    contentViewPagerFragmentHolder.updateTiles(state.getExtras().getString(
-                            BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()));
+                    contentViewPagerFragmentHolder.updateTiles();
                     break;
                 case STATE_SKIPPING_TO_NEXT:
                     //update more information fragment
@@ -183,8 +180,7 @@ public class Navigate extends AppCompatActivity
                     if (adapter != null) {
                         adapter.notifyDataSetChanged();
                     }
-                    contentViewPagerFragmentHolder.updateTiles(state.getExtras().getString(
-                            BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name()));
+                    contentViewPagerFragmentHolder.updateTiles();
                     break;
                 case STATE_SKIPPING_TO_QUEUE_ITEM:
                     throw new Error("Not implemented");
@@ -569,10 +565,7 @@ public class Navigate extends AppCompatActivity
                 if (adapter != null) {
                     adapter.notifyDataSetChanged();
                 }
-                contentViewPagerFragmentHolder.updateTiles(bundle.getString(
-                        BackgroundAudioService.ActionExtras.MEDIA_NEXT_ADDED_HREF.name(),
-                        ""
-                ));
+                contentViewPagerFragmentHolder.updateTiles();
                 break;
             case MEDIA_DOWNLOADING_PROGRESS:
                 int[] downloadProgressInts = bundle.getIntArray(

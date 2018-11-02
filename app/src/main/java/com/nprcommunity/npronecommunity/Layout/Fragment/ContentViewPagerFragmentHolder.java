@@ -57,8 +57,8 @@ public class ContentViewPagerFragmentHolder extends Fragment {
         return view;
     }
 
-    public void updateTiles(String lastHref) {
-        observable.notifyObservers(lastHref);
+    public void updateTiles() {
+        observable.notifyObservers();
     }
 
     @Override

@@ -61,7 +61,7 @@ public class ContentQueueRecyclerViewAdapter
         holder.titleView.setText(tmpQueueItem.attributes.audioTitle);
         holder.hrefView.setText(tmpQueueItem.href);
 
-        holder.imageView.setImageResource(R.drawable.blank_image);
+        holder.imageView.setImageResource(R.mipmap.ic_launcher);
         if (tmpQueueItem.links.hasImage()) {
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(this.context);

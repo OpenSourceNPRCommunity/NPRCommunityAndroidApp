@@ -8,6 +8,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -71,8 +72,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     private final String TAG = "BACKGROUNDAUDIOSERVICE";
     private MediaPlayer mediaPlayer;
     private MediaQueueManager mediaQueueManager;
-    private APIRecommendations.ItemJSON currentMedia,
-            lastMedia;
+    private APIRecommendations.ItemJSON currentMedia;
     private FileCache fileCache;
     private AudioManager audioManager;
     private SettingsAndTokenManager settingsAndTokenManager;
@@ -202,13 +202,14 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         @Override
         public void onRewind() {
             super.onRewind();
-            seekMedia(getMediaCurrentPosition() -(int)(10*Util.MILLI_SECOND));
+            seekMedia(getMediaCurrentPosition() - (int)(10*Util.MILLI_SECOND));
         }
 
         @Override
         public void onStop() {
             super.onStop();
             pauseMedia();
+            mediaQueueManager.forceSaveQueue();
             stopForeground(true);
             BackgroundAudioService.this.stopSelf();
         }
@@ -231,11 +232,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
      */
     public enum ActionExtras {
         MEDIA_ERROR_LOADING_REMOVE_ITEM,
-        MEDIA_NEXT_LAST_MEDIA_HREF,
         MEDIA_NEXT_IS_SKIPPABLE,
         MEDIA_PREPARED_HREF,
-        MEDIA_REMOVED_I,
-        MEDIA_NEXT_ADDED_HREF
+        MEDIA_REMOVED_I
     }
 
     public enum CommandCompat {
@@ -453,8 +452,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         }
 
         Bundle bundle = new Bundle();
-        bundle.putString(BackgroundAudioService.ActionExtras.MEDIA_NEXT_LAST_MEDIA_HREF.name(),
-                lastMedia == null ? "" : lastMedia.href);
         playbackstateBuilder.setExtras(bundle);
         playbackstateBuilder.setState(state,
                 currentMedia == null ? 0 : currentMedia.attributes.rating.elapsed * 1000,
@@ -474,6 +471,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                         R.drawable.ic_replay_10_white_40dp,
                         getString(R.string.rewind),
                         MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                // NOTE: Rewind rewinds 10 seconds
+                                // intent only supports certain actions, check out docs
                                 this, PlaybackStateCompat.ACTION_REWIND
                         )
                 )
@@ -564,14 +563,26 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
         if (currentMedia != null) {
             //Notification icon in card
-            //TODO TODO metadata icon
+
+            //set default image
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
-                    BitmapFactory.decodeResource(getResources(), R.drawable.blank_image));
+                        BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+            // load in actual image
+            fileCache.getImage(
+                    currentMedia.href,
+                    (Bitmap bitmap) -> {
+                        metadataBuilder.putBitmap(
+                                MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
+                                bitmap
+                        );
+                    },
+                    null
+            );
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                    BitmapFactory.decodeResource(getResources(), R.drawable.blank_image));
+                    BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             //lock screen icon for pre lollipop
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,
-                    BitmapFactory.decodeResource(getResources(), R.drawable.blank_image));
+                    BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     currentMedia.attributes.audioTitle);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,
@@ -583,9 +594,11 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     isMediaSkippable() ? 1 : 0);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID,
                     currentMedia.href);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION,
+                    currentMedia.attributes.description);
+            metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, getMediaImage().href);
         } else {
             //Notification icon in card
-            //TODO TODO metadata icon
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
@@ -603,6 +616,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, getMediaDuration());
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT, 0);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "");
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION,
+                    unknown);
+            metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, null);
         }
 
 
@@ -874,8 +890,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //set is prepared to false
             isPrepared = false;
 
-            lastMedia = currentMedia;
-
             //Remove last track
             if (currentMedia != null && removeTrack) {
                 mediaQueueManager.remove(currentMedia);
@@ -1058,7 +1072,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                         hasNextMedia()
                 }
         );
-        bundleMediaAdd.putString(ActionExtras.MEDIA_NEXT_ADDED_HREF.name(), queueItem.href);
         mediaSessionCompat.sendSessionEvent(
                 BackgroundAudioService.Action.MEDIA_ADDED_TO_QUEUE.name(),
                 bundleMediaAdd
@@ -1104,6 +1117,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                             BackgroundAudioService.Action.SEEK_CHANGE.name(),
                             bundleMediaSeek
                     );
+                    setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING);
                 }
                 try {
                     Thread.sleep(250);

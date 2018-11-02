@@ -184,7 +184,9 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
 
                         //update progress to complete
                         //doesnt matter, download is complete successfully notify frontend
-                        progressCallback.updateProgress(1, 1, 0);
+                        if (progressCallback != null) {
+                            progressCallback.updateProgress(1, 1, 0);
+                        }
 
                         //set fully downloaded
                         audioJSON.progressTracker.setIsFullyDownloaded(true);

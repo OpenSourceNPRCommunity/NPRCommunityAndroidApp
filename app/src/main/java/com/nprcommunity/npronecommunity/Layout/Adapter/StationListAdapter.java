@@ -93,7 +93,7 @@ public class StationListAdapter extends ArrayAdapter<APIStation.ItemJSON> {
 
         //sets default image
         ImageView imageView = convertView.findViewById(R.id.station_image_view);
-        imageView.setImageResource(R.drawable.blank_image);
+        imageView.setImageResource(R.mipmap.ic_launcher);
 
         if (item.links.hasImage()) {
             //only run if has an image

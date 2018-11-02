@@ -102,7 +102,7 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
 
         holder.textView.setText(itemJSON.attributes.title);
 
-        holder.imageView.setImageResource(R.drawable.blank_image);
+        holder.imageView.setImageResource(R.mipmap.ic_launcher);
 
         if (itemJSON.links.hasImage()) {
             //only run if has an image

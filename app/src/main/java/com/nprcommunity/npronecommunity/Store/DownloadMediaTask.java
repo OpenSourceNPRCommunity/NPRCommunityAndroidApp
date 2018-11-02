@@ -17,7 +17,7 @@ public class DownloadMediaTask implements Runnable{
 
     private String TAG = "STORE.DOWNLOADMEDIATASK";
     private FileCache.Type type;
-    private CacheResponse cacheResponse;
+    private CacheResponseMedia cacheResponseMedia;
     private final WeakReference<Context> weakContext;
     private String url = null;
     private ProgressCallback progressCallback;
@@ -25,11 +25,11 @@ public class DownloadMediaTask implements Runnable{
 
     protected DownloadMediaTask(Context weakContext,
                                 FileCache.Type type,
-                                CacheResponse cacheResponse,
+                                CacheResponseMedia cacheResponseMedia,
                                 String url,
                                 ProgressCallback progressCallback) {
         this.type = type;
-        this.cacheResponse = cacheResponse;
+        this.cacheResponseMedia = cacheResponseMedia;
         this.weakContext = new WeakReference<>(weakContext);
         this.url = url;
         this.progressCallback = progressCallback;
@@ -41,7 +41,7 @@ public class DownloadMediaTask implements Runnable{
 
     @Override
     public void run() {
-        cacheResponse.executeFunc(getFileInputStream(), url);
+        cacheResponseMedia.callback(getFileInputStream(), url);
     }
 
     private FileInputStream getFileInputStream() {

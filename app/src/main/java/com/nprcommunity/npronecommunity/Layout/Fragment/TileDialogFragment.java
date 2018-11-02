@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
@@ -204,14 +205,12 @@ public class TileDialogFragment extends DialogFragment implements Observer {
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
             fileCache.getImage(
                     aggregationJSON.links.getValidImage().href,
-                    (FileInputStream fileInputStream, String url) -> {
-                        if (fileInputStream == null) {
+                    (Bitmap bitmap) -> {
+                        if (bitmap == null) {
                             Log.e(TAG, "onBindViewHolder: failed to get image. Check out other logs");
                         } else {
                             activity.runOnUiThread(() -> {
-                                imageView.setImageBitmap(
-                                        BitmapFactory.decodeStream(fileInputStream)
-                                );
+                                imageView.setImageBitmap(bitmap);
                             });
                         }
                     },

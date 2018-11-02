@@ -30,7 +30,7 @@ public class APIUser extends API {
             try {
                 userJSON = jsonAdapter.fromJson(jsonData);
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
             }
         }
     }

@@ -42,14 +42,14 @@ public class APIRecommendations extends API {
                 if (recommendationsJSON != null && recommendationsJSON.isValidRecommendations()) {
                     cleanRecommendation(recommendationsJSON);
                 } else {
-                    Log.e(TAG, "executeFunc: Error invalid recommendation");
+                    Log.e(TAG, "callback: Error invalid recommendation");
                 }
                 //Set data
                 RecommendationCache recommendationsCache = new RecommendationCache(recommendationsJSON, URL);
                 JSONCache.putObject(URL, recommendationsCache);
                 data = recommendationsCache;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
             }
         }
     }

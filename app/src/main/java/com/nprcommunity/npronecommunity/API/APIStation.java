@@ -39,7 +39,7 @@ public class APIStation extends API {
                 //Set data
                 data = stationJSON;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
             }
         }
     }

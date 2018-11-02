@@ -37,14 +37,14 @@ public class APIAggregations extends API {
                 if (aggregationsJSON != null && aggregationsJSON.isValidAggregation()) {
                     cleanAggregation(aggregationsJSON);
                 } else {
-                    Log.e(TAG, "executeFunc: Error invalid aggregations");
+                    Log.e(TAG, "callback: Error invalid aggregations");
                 }
                 //Set data
                 AggregationsCache aggregationsCache = new AggregationsCache(aggregationsJSON, URL);
                 JSONCache.putObject(URL, aggregationsCache);
                 data = aggregationsCache;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
             }
         }
     }

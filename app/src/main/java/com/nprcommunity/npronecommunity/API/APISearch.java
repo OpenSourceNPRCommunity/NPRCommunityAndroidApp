@@ -74,13 +74,13 @@ public class APISearch extends API {
                                                 //Add ItemJSON
                                                 searchJSON.items.add(new ItemJSON(audio, itemJSON));
                                             } else {
-                                                Log.e(TAG, "executeFunc: itemJSON is null or isnt valid[" +
+                                                Log.e(TAG, "callback: itemJSON is null or isnt valid[" +
                                                         itemJSON + "]");
                                             }
                                         } catch (IOException e) {
-                                            Log.e(TAG, "executeFunc: Error adapting json data: " + jsonData);
+                                            Log.e(TAG, "callback: Error adapting json data: " + jsonData);
                                         } catch (JsonDataException e) {
-                                            Log.e(TAG, "executeFunc: error: ", e);
+                                            Log.e(TAG, "callback: error: ", e);
                                         }
                                     } else if (tmpType.equals(aggregation.name())) {
                                         JsonAdapter<APIAggregations.AggregationJSON> jsonAdapter
@@ -93,31 +93,31 @@ public class APISearch extends API {
                                                 //Add Aggregation
                                                 searchJSON.items.add(new ItemJSON(aggregation, aggregationJSON));
                                             } else {
-                                                Log.e(TAG, "executeFunc: aggregationJSON is null or isnt valid[" +
+                                                Log.e(TAG, "callback: aggregationJSON is null or isnt valid[" +
                                                         aggregationJSON + "]");
                                             }
                                         } catch (IOException e) {
-                                            Log.e(TAG, "executeFunc: Error adapting json data: " + jsonData);
+                                            Log.e(TAG, "callback: Error adapting json data: " + jsonData);
                                         } catch (JsonDataException e) {
-                                            Log.e(TAG, "executeFunc: error: ", e);
+                                            Log.e(TAG, "callback: error: ", e);
                                         }
                                     } else {
-                                        Log.e(TAG, "executeFunc: unknown type [" + tmpType + "]");
+                                        Log.e(TAG, "callback: unknown type [" + tmpType + "]");
                                     }
                                 } else {
-                                    Log.e(TAG, "executeFunc: could not setTmpType");
+                                    Log.e(TAG, "callback: could not setTmpType");
                                 }
                             } else {
-                                Log.e(TAG, "executeFunc: could not setTmpArr");
+                                Log.e(TAG, "callback: could not setTmpArr");
                             }
                         } catch (JSONException e) {
-                            Log.e(TAG, "executeFunc: could not parse", e);
+                            Log.e(TAG, "callback: could not parse", e);
                         }
                     }
                     data = searchJSON;
                 }
             } catch (JSONException e) {
-                Log.e(TAG, "executeFunc: could not convert from string", e);
+                Log.e(TAG, "callback: could not convert from string", e);
             }
         }
     }

@@ -4,6 +4,8 @@ import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 import android.util.Base64;
 import android.util.Log;
@@ -12,13 +14,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.SoftReference;
+import java.nio.channels.FileLock;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileCache {
     private static FileCache fileCache;
@@ -28,6 +36,7 @@ public class FileCache {
     public static final int MILLI_SECOND_IN_NANO = 1000000,
                         MILLI_NOTIFY = 750;
     private Context context;
+    private Map<String, SoftReference<Bitmap>> imageCache = new ConcurrentHashMap<>();
 
     public enum Type {
         IMAGE,
@@ -66,6 +75,27 @@ public class FileCache {
         }
         File file = new File(path);
         return file.exists();
+    }
+
+    private boolean waitTillFree(String filename, Type type, int millisMaxWait) {
+        AtomicBoolean success = new AtomicBoolean(false);
+        Thread thread = new Thread(() -> {
+            while (imageCache.containsKey(filename)) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ignored) {
+                }
+            }
+            success.set(true);
+        });
+        thread.start();
+        try {
+            // wait for max seconds to wait before giving up
+            thread.join(millisMaxWait);
+        } catch (InterruptedException e) {
+            Log.e(TAG, "getFileLock: waiting for lock", e);
+        }
+        return success.get();
     }
 
     public long getDirSize(Type type) {
@@ -133,57 +163,135 @@ public class FileCache {
         return path;
     }
 
-    public void getImage(String filename, CacheResponse cacheResponse,
+    private Bitmap getCacheImage(String filename) {
+        if (imageCache.containsKey(filename)) {
+            SoftReference<Bitmap> imageBitmap = imageCache.get(filename);
+            if (imageBitmap != null) {
+                return imageBitmap.get();
+            }
+        }
+        return null;
+    }
+
+    public void getImage(String filename, CacheResponseImage cacheResponseImage,
                          ProgressCallback progressCallback) {
         String path = getFilePath(filename, Type.IMAGE);
+
+        //check if image is in memory cache
+        Bitmap cacheImage = getCacheImage(filename);
+        if (cacheImage != null) {
+            cacheResponseImage.callback(cacheImage);
+            return;
+        }
+
+        // Check if file exists
         if(fileExists(filename, Type.IMAGE)) {
-            //The file exists load in the audio
-            try {
-                File file = new File(path);
-                if (file.exists()) {
-                    //gets the last time
-                    if(!file.setLastModified((new Date()).getTime())) {
-                        Log.d(TAG, "getImage: failed to set last modified: " + filename);
+            //start a new thread to update the last modified
+            // todo optimize this somehow in the future... to reduce threads
+            Thread thread = new Thread(() -> {
+                int MAX_ATTEMPTS = 5;
+                int waitTime = 5;
+                int startWaitTime = 6;
+                File file = new File(getFilePath(filename, Type.IMAGE));
+                for (int i = 0; i < MAX_ATTEMPTS; i++) {
+                    Bitmap bitmap = getCacheImage(filename);
+                    if (bitmap != null) {
+                        // same image in thread, just check if another thread already cached
+                        cacheResponseImage.callback(bitmap);
                     }
+                    if (file.canWrite()) {
+                        try {
+                            bitmap = BitmapFactory.decodeFile(
+                                    getFilePath(filename, Type.IMAGE)
+                            );
+                            if (bitmap != null) {
+                                imageCache.put(filename, new SoftReference<>(bitmap));
+                                cacheResponseImage.callback(bitmap);
+                                if (file.setLastModified((new Date()).getTime())) {
+                                    break;
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "getImage: failed to set last modified: " + filename, e);
+                        }
+                    }
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException e) {
+                        Log.e(TAG, "getImage: could not sleep");
+                    }
+                    //exponential backoff, max wait time will be about ~3 seconds
+                    waitTime *= startWaitTime;
                 }
-                FileInputStream in = new FileInputStream(file);
-                cacheResponse.executeFunc(in, filename);
-            } catch (FileNotFoundException e) {
-                Log.e(TAG, "getImage: " + filename, e);
-                cacheResponse.executeFunc(null, null);
-            }
+            });
+            thread.start();
         } else {
             //The file does not exist
             DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
                     DownloadPoolExecutor.Type.Image
             );
             downloadPoolExecutor.execute(
-                new DownloadMediaTask(context, Type.IMAGE, cacheResponse, filename,
-                    progressCallback)
+                new DownloadMediaTask(
+                        context,
+                        Type.IMAGE,
+                        (fileInputStream, url) -> {
+                            if (fileInputStream != null) {
+                                Bitmap bitmap = BitmapFactory.decodeStream(fileInputStream);
+                                SoftReference<Bitmap> softReference = new SoftReference<>(bitmap);
+                                imageCache.put(filename, softReference);
+                            } else {
+                                // if there is another thread downloading, then
+                                // wait till the file is free
+                                if (fileExists(filename, Type.IMAGE)) {
+                                    if (!waitTillFree(filename, Type.IMAGE, 5000)) {
+                                        Log.e(TAG, "getImage: Failed to download image: " + filename);
+                                        return;
+                                    }
+                                }
+                            }
+
+                            Bitmap tmpCacheImage = getCacheImage(filename);
+                            cacheResponseImage.callback(tmpCacheImage);
+                        },
+                        filename,
+                        progressCallback)
             );
         }
     }
 
     public DownloadMediaTask getAudio(String filename, boolean forceRedownload,
-                           CacheResponse cacheResponse,
-                           ProgressCallback progressCallback) {
+                                      CacheResponseMedia cacheResponseMedia, ProgressCallback progressCallback) {
         String path = getFilePath(filename, Type.AUDIO);
         if(!forceRedownload && fileExists(filename, Type.AUDIO)) {
             //The file exists load in the audio
+            FileLock fileLock = null;
             try {
                 File file = new File(path);
                 FileInputStream in = new FileInputStream(file);
-                cacheResponse.executeFunc(in, filename);
+                fileLock = in.getChannel().lock(0L, Long.MAX_VALUE, true);
+                cacheResponseMedia.callback(in, filename);
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "getAudio: " + filename, e);
-                cacheResponse.executeFunc(null, null);
+                cacheResponseMedia.callback(null, null);
+            } catch (IOException e) {
+                Log.e(TAG, "getAudio: " + filename, e);
+                cacheResponseMedia.callback(null, null);
+            } finally {
+                if (fileLock != null) {
+                    try {
+                        fileLock.release();
+                    } catch (IOException e) {
+                        Log.e(TAG, "getAudio: " + filename, e);
+                        cacheResponseMedia.callback(null, null);
+                    }
+                }
             }
         } else {
             //The file does not exist
             DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
                     DownloadPoolExecutor.Type.Audio
             );
-            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(context, Type.AUDIO, cacheResponse, filename,
+            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(context, Type.AUDIO, cacheResponseMedia, filename,
                             progressCallback);
             downloadPoolExecutor.execute(downloadMediaTask);
             return downloadMediaTask;
@@ -233,10 +341,10 @@ public class FileCache {
         FileOutputStream outputStream;
         try {
             outputStream = new FileOutputStream(file);
-//            FileLock fileLock = null;
+            FileLock fileLock = null;
             int count = 0;
-//            try {
-//                fileLock = outputStream.getChannel().lock();
+            try {
+                fileLock = outputStream.getChannel().lock();
                 byte[] buffer = new byte[1024];
                 int len;
                 int prevProgress = count;
@@ -259,15 +367,14 @@ public class FileCache {
                 }
                 //set finished to download
                 progressCallback.updateProgress(total, total, 0);
-//            } finally {
-//                if (fileLock != null) {
-//                    fileLock.release();
-//                }
-//            }
+            } finally {
+                if (fileLock != null) {
+                    fileLock.release();
+                }
+            }
             outputStream.close();
         } catch (FileNotFoundException e) {
             Log.e(TAG, "saveFile: filenot found outputstream filename:" + filename, e);
-            ///todo log make toast saying not found?
             return null;
         } catch (Exception e) {
             Log.e(TAG, "saveFile: outputstream filename:" + filename, e);

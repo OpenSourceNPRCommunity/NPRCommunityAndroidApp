@@ -1,6 +1,7 @@
 package com.nprcommunity.npronecommunity.Layout.Fragment;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -183,15 +184,12 @@ public class ContentMediaPlayerFragment extends Fragment {
             if (hrefImage != null) {
                 fileCache.getImage(
                         hrefImage,
-                        (FileInputStream fileInputStream, String url) -> {
-                            if (fileInputStream == null) {
-                                //TODO: put up blank image
+                        (Bitmap bitmap) -> {
+                            if (bitmap == null) {
                                 Log.e(TAG, "onServiceConnected: failed " +
                                         "to get image. Check out other logs");
                             } else {
-                                mediaPlayerImageView.setImageBitmap(
-                                        BitmapFactory.decodeStream(fileInputStream)
-                                );
+                                mediaPlayerImageView.setImageBitmap(bitmap);
                             }
                         },
                         (int progress, int total, int speed) -> {

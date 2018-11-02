@@ -2,6 +2,7 @@ package com.nprcommunity.npronecommunity.Layout.Adapter;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -67,12 +68,12 @@ public class ContentQueueRecyclerViewAdapter
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
             fileCache.getImage(
                     tmpQueueItem.links.getValidImage().href,
-                    (FileInputStream fileInputStream, String url) -> {
-                        if (fileInputStream == null) {
+                    (Bitmap bitmap) -> {
+                        if (bitmap == null) {
                             Log.e(TAG, "onBindViewHolder: failed to get image. Check out other logs");
                         } else {
                             activity.runOnUiThread(() -> {
-                                holder.imageView.setImageBitmap(BitmapFactory.decodeStream(fileInputStream));
+                                holder.imageView.setImageBitmap(bitmap);
                             });
                         }
                     },

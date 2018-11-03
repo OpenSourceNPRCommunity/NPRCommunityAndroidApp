@@ -454,7 +454,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         Bundle bundle = new Bundle();
         playbackstateBuilder.setExtras(bundle);
         playbackstateBuilder.setState(state,
-                currentMedia == null ? 0 : currentMedia.attributes.rating.elapsed * 1000,
+                currentMedia == null ? 0 : currentMedia.attributes.rating.elapsed.get() * 1000,
                 0
         );
         mediaSessionCompat.setPlaybackState(playbackstateBuilder.build());
@@ -810,7 +810,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
         //update the position, if previously saved
         if (currentMedia != null) {
-            seekMedia(currentMedia.attributes.rating.elapsed * 1000);
+            seekMedia(currentMedia.attributes.rating.elapsed.get() * 1000);
         }
 
         //if the play media is not set, then do not attempt to play media...
@@ -1106,7 +1106,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 if (currentSeek/1000 != lastSeek) {
                     lastSeek = currentSeek/1000;
                     //update elapsed
-                    currentMedia.attributes.rating.elapsed = currentSeek/1000;
+                    currentMedia.attributes.rating.elapsed.getAndSet(currentSeek/1000);
                     Bundle bundleMediaSeek = new Bundle();
                     bundleMediaSeek.putString(ACTION, BackgroundAudioService.Action.SEEK_CHANGE.name());
                     bundleMediaSeek.putInt(
@@ -1138,8 +1138,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //set the current media information
             if (type.equals(RatingSender.Type.COMPLETED)) {
                 currentMedia.attributes.rating.rating = type.name();
-                currentMedia.attributes.rating.elapsed =
-                        currentMedia.attributes.rating.duration;
+                currentMedia.attributes.rating.elapsed.set(currentMedia.attributes.rating.duration);
             }
             //Note: the elapsed is continuously set by background thread
 

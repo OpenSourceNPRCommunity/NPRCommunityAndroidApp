@@ -95,6 +95,10 @@ public class FileCache {
         } catch (InterruptedException e) {
             Log.e(TAG, "getFileLock: waiting for lock", e);
         }
+        if (thread.isAlive()) {
+            // kill thread if still alive after join
+            thread.interrupt();
+        }
         return success.get();
     }
 

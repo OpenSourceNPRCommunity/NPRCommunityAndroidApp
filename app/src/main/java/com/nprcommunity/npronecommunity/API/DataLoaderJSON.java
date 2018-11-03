@@ -38,15 +38,24 @@ public class DataLoaderJSON extends AsyncTask<String, Void, Boolean> {
         list.add("Bearer " + urlAndToken[1]);
         headers.set("Authorization", list);
         HttpTransport transport = new NetHttpTransport();
+        HttpResponse response = null;
         try {
             HttpRequest request = transport.createRequestFactory().buildGetRequest(url);
             request.setHeaders(headers);
-            HttpResponse response = request.execute();
+            response = request.execute();
             responseJSON = response.parseAsString();
             return true;
         } catch (IOException e) {
             Log.e(TAG, "doInBackground", e);
             responseJSON = null;
+        } finally {
+            if (response != null) {
+                try {
+                    response.disconnect();
+                } catch (IOException e) {
+                    Log.e(TAG, "doInBackground: Failed to disconnect", e);
+                }
+            }
         }
         return false;
     }

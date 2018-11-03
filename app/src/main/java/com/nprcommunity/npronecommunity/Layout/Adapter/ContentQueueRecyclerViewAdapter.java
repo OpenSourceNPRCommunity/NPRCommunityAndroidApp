@@ -98,8 +98,8 @@ public class ContentQueueRecyclerViewAdapter
             //else
             holder.progressSpeed.setText(Util.getBytesPerSecString(0));
             holder.progressSpeed.setVisibility(View.VISIBLE);
-            holder.progressPercent.setText("0%");
-            holder.progressBar.setVisibility(View.VISIBLE);
+            holder.progressPercent.setText(context.getString(R.string.in_download_queue));
+            holder.progressBar.setVisibility(View.GONE);
         }
 
         //setup on close

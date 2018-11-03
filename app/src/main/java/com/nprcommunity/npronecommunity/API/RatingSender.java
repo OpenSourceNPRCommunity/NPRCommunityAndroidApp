@@ -80,25 +80,32 @@ public class RatingSender {
                     request.setConnectTimeout(TIMEOUT);
                     request.setReadTimeout(TIMEOUT);
                     HttpResponse response = request.execute();
-                    Log.i(TAG, "sendAsyncRating: successfully sent for [" + ratingJSON + "]");
+                    try {
 
-                    //if uses recommendations
-                    if (hasRecommend) {
-                        //overrides default url in cache when saving
-                        APIRecommendations recommendations = new APIRecommendations(
-                                backgroundAudioService,
-                                APIRecommendations.DEFAULT_RECOMMENDATIONS_URL
-                        );
-                        recommendations.executeFunc(response.parseAsString(), true);
-                        RecommendationCache recommendationCache = recommendations.getData();
-                        //add in items that were recommended
-                        if (recommendationCache != null && recommendationCache.data != null) {
-                            for (APIRecommendations.ItemJSON itemJSON : recommendationCache.data.items) {
-                                //add them to the queue
-                                backgroundAudioService.addToQueue(itemJSON);
+                        Log.i(TAG, "sendAsyncRating: successfully sent for [" + ratingJSON + "]");
+
+                        //if uses recommendations
+                        if (hasRecommend) {
+                            //overrides default url in cache when saving
+                            APIRecommendations recommendations = new APIRecommendations(
+                                    backgroundAudioService,
+                                    APIRecommendations.DEFAULT_RECOMMENDATIONS_URL
+                            );
+                            recommendations.executeFunc(response.parseAsString(), true);
+                            RecommendationCache recommendationCache = recommendations.getData();
+                            //add in items that were recommended
+                            if (recommendationCache != null && recommendationCache.data != null) {
+                                for (APIRecommendations.ItemJSON itemJSON : recommendationCache.data.items) {
+                                    //add them to the queue
+                                    backgroundAudioService.addToQueue(itemJSON);
+                                }
+                            } else {
+                                Log.e(TAG, "sendAsyncRating: recommendations is null");
                             }
-                        } else {
-                            Log.e(TAG, "sendAsyncRating: recommendations is null");
+                        }
+                    } finally {
+                        if (response != null) {
+                            response.disconnect();
                         }
                     }
                 } catch (IOException e) {

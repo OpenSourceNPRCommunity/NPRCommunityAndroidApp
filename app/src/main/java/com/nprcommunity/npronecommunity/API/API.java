@@ -30,7 +30,7 @@ public abstract class API {
         data = JSONCache.getObject(URL);
         //If the data is null, then reload
         if(data != null && !((BaseCache)data).isExpired()) {
-            //Overrides the executeFunc of this class
+            //Overrides the callback of this class
             //Insteads skips to execute function
             apiDataResponse.executeFunc();
         } else {

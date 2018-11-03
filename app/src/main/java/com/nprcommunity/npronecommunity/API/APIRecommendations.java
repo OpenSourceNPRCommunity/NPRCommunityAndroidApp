@@ -6,15 +6,18 @@ import android.util.Log;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.RecommendationCache;
 import com.nprcommunity.npronecommunity.Store.JSONCache;
 import com.nprcommunity.npronecommunity.Util;
+import com.squareup.moshi.FromJson;
 import com.squareup.moshi.Json;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
+import com.squareup.moshi.ToJson;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class APIRecommendations extends API {
     private static String TAG = "API.RECOMMENDATIONS";
@@ -34,7 +37,7 @@ public class APIRecommendations extends API {
     @Override
     public void executeFunc(String jsonData, Boolean success) {
         if(success) {
-            Moshi moshi = new Moshi.Builder().build();
+            Moshi moshi = new Moshi.Builder().add(new AtomicIntegerAdapter()).build();
             JsonAdapter<RecommendationsJSON> jsonAdapter = moshi.adapter(RecommendationsJSON.class);
             try {
                 RecommendationsJSON recommendationsJSON = jsonAdapter.fromJson(jsonData);
@@ -42,14 +45,14 @@ public class APIRecommendations extends API {
                 if (recommendationsJSON != null && recommendationsJSON.isValidRecommendations()) {
                     cleanRecommendation(recommendationsJSON);
                 } else {
-                    Log.e(TAG, "executeFunc: Error invalid recommendation");
+                    Log.e(TAG, "callback: Error invalid recommendation");
                 }
                 //Set data
                 RecommendationCache recommendationsCache = new RecommendationCache(recommendationsJSON, URL);
                 JSONCache.putObject(URL, recommendationsCache);
                 data = recommendationsCache;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
             }
         }
     }
@@ -186,12 +189,28 @@ public class APIRecommendations extends API {
                         donateUrl;
     }
 
+    public class AtomicIntegerAdapter {
+        @FromJson AtomicInteger fromJson(String atomicIntegerJSON) {
+            AtomicInteger atomicInteger = null;
+            try {
+                atomicInteger = new AtomicInteger(Integer.parseInt(atomicIntegerJSON));
+            } catch (NumberFormatException e) {
+                atomicInteger = new AtomicInteger();
+            }
+            return atomicInteger;
+        }
+
+        @ToJson String toJson(AtomicInteger atomicInteger) {
+            return atomicInteger.toString();
+        }
+    }
+
     public static class RatingJSON implements Serializable{
         public String mediaId,
                         origin,
                         rating;
-        public int elapsed,
-                    duration;
+        public AtomicInteger elapsed;
+        public int duration;
         public String timestamp,
                         channel,
                         cohort;

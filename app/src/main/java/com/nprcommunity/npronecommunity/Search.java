@@ -4,9 +4,11 @@ import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.os.RemoteException;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.util.Log;
@@ -15,21 +17,49 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
 
+import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.APISearch;
 import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.Layout.Adapter.SearchListAdapter;
+import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
 
-public class Search extends AppCompatActivity {
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.PLAY_MEDIA_NOW;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.PLAY_MEDIA_NOW_QUEUE_ITEM;
+
+public class Search extends AppCompatActivity
+    implements ContentRecommendationsFragment.OnFragmentInteractionListener {
 
     public static final int RESULT_CODE = 1002;
     private String TAG = "Search";
-    private IBinder serviceBinder;
-    private ServiceConnection serverConn;
+
+    private MediaControllerCompat mediaControllerCompat;
+    private MediaBrowserCompat mediaBrowserCompat;
+    private MediaBrowserCompat.ConnectionCallback mediaBrowserCompatConnectionCallback = new MediaBrowserCompat.ConnectionCallback() {
+        @Override
+        public void onConnected() {
+            super.onConnected();
+            try {
+                mediaControllerCompat = new MediaControllerCompat(Search.this, mediaBrowserCompat.getSessionToken());
+                MediaControllerCompat.setMediaController(Search.this, mediaControllerCompat);
+
+            } catch (RemoteException e) {
+                Log.e(TAG, "onConnected: error connecting to remote", e);
+            }
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
+
+        // setup to listen to media combat and get callbacks
+        mediaBrowserCompat = new MediaBrowserCompat(this,
+                new ComponentName(this, BackgroundAudioService.class),
+                mediaBrowserCompatConnectionCallback, getIntent().getExtras());
+        mediaBrowserCompat.connect();
+
         handleIntent(getIntent());
     }
 
@@ -86,44 +116,14 @@ public class Search extends AppCompatActivity {
     private void handleIntent(Intent intent) {
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String query = intent.getStringExtra(SearchManager.QUERY);
-            serverConn = new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder binder) {
-                    Log.d(TAG, "onServiceConnected");
-
-                    serviceBinder = binder;
-
-                    //get background service
-                    BackgroundAudioService.LocalBinder  localBinder
-                            = (BackgroundAudioService.LocalBinder) serviceBinder;
-                    BackgroundAudioService backgroundAudioService = localBinder.getService();
-
-                    if (backgroundAudioService == null) {
-                        //todo error out
-                        return;
-                    }
-                    handleSearch(query, backgroundAudioService);
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-                    Log.d(TAG, "onServiceDisconnected");
-                    //TODO: Error or something about service
-                }
-            };
-
-            Intent backgroundServiceIntent = new Intent(this, BackgroundAudioService.class);
-            bindService(backgroundServiceIntent, serverConn, Context.BIND_AUTO_CREATE);
-            startService(backgroundServiceIntent);
+            handleSearch(query);
         }
     }
 
     @Override
     public void onDestroy() {
-        if (serverConn != null) {
-            unbindService(serverConn);
-        }
         super.onDestroy();
+        mediaBrowserCompat.disconnect();
     }
 
     @Override
@@ -133,7 +133,7 @@ public class Search extends AppCompatActivity {
         return true;
     }
 
-    private void handleSearch(String query, BackgroundAudioService backgroundAudioService) {
+    private void handleSearch(String query) {
         APISearch search = new APISearch(this, query);
         search.updateData(() -> {
             APISearch.SearchJSON searchData = search.getData();
@@ -148,12 +148,30 @@ public class Search extends AppCompatActivity {
                         Search.this,
                         R.id.search_list,
                         searchData.items,
-                        backgroundAudioService
+                        this
                 ));
                 //hide the progress bar show the search list
                 Search.this.findViewById(R.id.search_progress_bar).setVisibility(View.GONE);
                 Search.this.findViewById(R.id.search_list).setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    @Override
+    public String getMediaHref() {
+        return mediaControllerCompat.getMetadata().getDescription().getMediaId();
+    }
+
+    @Override
+    public void addToQueue(APIRecommendations.ItemJSON queueItem) {
+        MediaSessionCompat.QueueItem mediaQueueItem = LineUpQueue.translateAPIQueueItem(queueItem);
+        mediaControllerCompat.addQueueItem(mediaQueueItem.getDescription());
+    }
+
+    @Override
+    public void playMediaNow(APIRecommendations.ItemJSON queueItem) {
+        Bundle playMediaNow = new Bundle();
+        playMediaNow.putSerializable(PLAY_MEDIA_NOW_QUEUE_ITEM.name(), queueItem);
+        mediaControllerCompat.sendCommand(PLAY_MEDIA_NOW.name(), playMediaNow, null);
     }
 }

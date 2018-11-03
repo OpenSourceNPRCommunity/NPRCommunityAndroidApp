@@ -2,10 +2,12 @@ package com.nprcommunity.npronecommunity.Background;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.Shared;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.DownloadPoolExecutor;
 import com.nprcommunity.npronecommunity.Store.DownloadMediaTask;
@@ -16,7 +18,6 @@ import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -25,36 +26,48 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 /**
  * Class used for downloading media in the queue
  * Will deal with deleting
+ * This class is a bit confusing I will admit it now that I am looking back on. I know there
+ * are Future and Promises that existin Java, but I wanted to try my own implementation. It
+ * turns out to be a bit confusing.
+ * The real point of this class is that downloading is a bit of a mess:
+ *  1. Background service inits
+ *  2. User cancels download
+ *  3. Background cancels download
+ *  4. On download complete, notify related parties
+ *
+ *  All while this is going on the program could be called from a number of different threads,
+ *  so it gets a wee bit wild.
+ *
+ *  I think the best thing to do here is to just dive into the code and please contact
+ *  me if you see anything blatantly wrong.
  */
 public class MediaQueueDownloadManager implements MediaQueueChangedListener {
     private final String TAG = "QUEUEDOWNLOADMANAGER";
     private final MediaQueueManager mediaQueueManager;
-    private final Observable observable;
+    private final MediaSessionCompat mediaSessionCompat;
     private final FileCache fileCache;
     private final Context context;
     private final Map<String, ThreadListener> threadListeners = new HashMap<>();
     private final ConcurrentMap<String, DownloadMediaTask> downloadTasks = new ConcurrentHashMap<>();
     private final Object lockThreadListener = new Object();
     private final Object lockDownloadTasks = new Object();
-    private final BackgroundAudioService backgroundAudioService;
 
     protected MediaQueueDownloadManager(MediaQueueManager mediaQueueManager,
-                                        Observable observable,
+                                        MediaSessionCompat mediaSessionCompat,
                                         FileCache fileCache,
-                                        Context context,
-                                        BackgroundAudioService backgroundAudioService) {
+                                        Context context) {
         this.mediaQueueManager = mediaQueueManager;
-        this.observable = observable;
+        this.mediaSessionCompat = mediaSessionCompat;
         this.fileCache = fileCache;
         this.context = context;
-        this.backgroundAudioService = backgroundAudioService;
         setupQueueDownloads();
     }
 
     private void setupQueueDownloads() {
-        List<APIRecommendations.ItemJSON> itemJSONList = mediaQueueManager.getMediaQueue();
+        List<MediaSessionCompat.QueueItem> itemJSONList = mediaQueueManager.getMediaQueue();
         for (int i = 0; i < itemJSONList.size(); i++) {
-            APIRecommendations.ItemJSON itemJSON = itemJSONList.get(i);
+            APIRecommendations.ItemJSON itemJSON = (APIRecommendations.ItemJSON) itemJSONList.get(i)
+                    .getDescription().getExtras().getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
             APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
             Shared.Progress progress = audioJSON.progressTracker;
             if (!progress.isFullyDownloaded()) {
@@ -76,7 +89,10 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                         BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
                         itemJSON.href
                 );
-                observable.notifyObservers(bundleMediaProgress);
+                mediaSessionCompat.sendSessionEvent(
+                        BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                        bundleMediaProgress
+                );
                 startDownload(i,itemJSON);
             }
         }
@@ -122,7 +138,10 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                     BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
                     itemJSON.href
             );
-            observable.notifyObservers(bundleMediaProgress);
+            mediaSessionCompat.sendSessionEvent(
+                    BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                    bundleMediaProgress
+            );
         };
 
         DownloadMediaTask downloadMediaTask = fileCache.getAudio(
@@ -132,12 +151,42 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                     if (fileInputStream == null) {
                         //something failed set full downloaded to false
                         audioJSON.progressTracker.setIsFullyDownloaded(false);
+
+                        synchronized (lockThreadListener) {
+                            ThreadListener threadListener = threadListeners.get(itemJSON.href);
+                            if (threadListener != null && threadListener.isAlive()) {
+                                synchronized (lockThreadListener) {
+                                    threadListener.notify();
+                                }
+                            } else {
+                                // if there is no thread waiting for response
+                                // AND if it is a failure, pump out a download error
+                                Bundle bundleMediaError = new Bundle();
+                                bundleMediaError.putString(
+                                        ACTION, BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name()
+                                );
+                                bundleMediaError.putString(
+                                        BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
+                                        context.getString(R.string.error_media_not_found)
+                                );
+                                bundleMediaError.putSerializable(
+                                        BackgroundAudioService.ActionExtras.MEDIA_ERROR_LOADING_REMOVE_ITEM.name(),
+                                        itemJSON
+                                );
+                                mediaSessionCompat.sendSessionEvent(
+                                        BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
+                                        bundleMediaError
+                                );
+                            }
+                        }
                     } else {
                         //success set the fully downloaded and file input stream
 
                         //update progress to complete
                         //doesnt matter, download is complete successfully notify frontend
-                        progressCallback.updateProgress(1, 1, 0);
+                        if (progressCallback != null) {
+                            progressCallback.updateProgress(1, 1, 0);
+                        }
 
                         //set fully downloaded
                         audioJSON.progressTracker.setIsFullyDownloaded(true);
@@ -156,11 +205,13 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
                                 Log.d(TAG, "startDownload: no threadListener found for [" +
                                         itemJSON.href + "]");
                             }
+                            if (threadListener != null && threadListener.isAlive()) {
+                                synchronized (threadListener) {
+                                    threadListener.notify();
+                                }
+                            }
                         }
                     }
-
-                    //call the response
-                    callResponse(fileInputStream != null, itemJSON);
                 },
                 progressCallback
         );
@@ -191,34 +242,6 @@ public class MediaQueueDownloadManager implements MediaQueueChangedListener {
         //if download hasn't begun then start one
         startDownload(i, itemJSON);
         return true;
-    }
-
-    private void callResponse(boolean success, APIRecommendations.ItemJSON itemJSON) {
-        Thread thread = threadListeners.get(itemJSON.href);
-        if (thread != null && thread.isAlive()) {
-            //notify's waiting thread to call callback
-            synchronized (thread) {
-                thread.notify();
-            }
-        } else {
-            // if there is no thread waiting for response
-            // AND if it is a failure, pump out a download error
-            if (!success) {
-                Bundle bundleMediaError = new Bundle();
-                bundleMediaError.putString(
-                        ACTION, BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name()
-                );
-                bundleMediaError.putString(
-                        BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
-                        context.getString(R.string.error_media_not_found)
-                );
-                bundleMediaError.putSerializable(
-                        BackgroundAudioService.ActionExtras.MEDIA_ERROR_LOADING_REMOVE_ITEM.name(),
-                        itemJSON
-                );
-                observable.notifyObservers(bundleMediaError);
-            }
-        }
     }
 
     @Override

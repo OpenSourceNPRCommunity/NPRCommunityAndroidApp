@@ -57,7 +57,7 @@ public class APIChannels extends API {
                 JSONCache.putObject(URL, baseCache);
                 data = baseCache;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
             }
         }
     }

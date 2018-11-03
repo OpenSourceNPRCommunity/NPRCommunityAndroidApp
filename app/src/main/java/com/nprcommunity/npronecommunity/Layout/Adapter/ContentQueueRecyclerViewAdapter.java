@@ -2,6 +2,7 @@ package com.nprcommunity.npronecommunity.Layout.Adapter;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -15,11 +16,12 @@ import android.widget.TextView;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.Background.MediaQueueManager;
-import com.nprcommunity.npronecommunity.Layout.Callback.ContentQueuePlayingListener;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.Layout.Callback.ItemTouchHelperListener;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment.OnListFragmentInteractionListener;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Util;
 
 import java.io.FileInputStream;
 
@@ -31,18 +33,15 @@ public class ContentQueueRecyclerViewAdapter
     private final Context context;
     private final static String TAG = "CONTENTQUEUERECYCLER";
     private MediaQueueManager mediaQueueManager;
-    private ContentQueuePlayingListener contentQueuePlayingListener;
     private Activity activity;
 
     public ContentQueueRecyclerViewAdapter(
             OnListFragmentInteractionListener listener,
-            ContentQueuePlayingListener contentQueuePlayingListener,
             Context context,
             Activity activity) {
         this.listener = listener;
         this.context = context;
         this.mediaQueueManager = MediaQueueManager.getInstance(context);
-        this.contentQueuePlayingListener = contentQueuePlayingListener;
         this.activity = activity;
     }
 
@@ -55,25 +54,27 @@ public class ContentQueueRecyclerViewAdapter
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
-        APIRecommendations.ItemJSON tmpQueueItem = mediaQueueManager.getQueueTrack(position);
+        APIRecommendations.ItemJSON tmpQueueItem = (APIRecommendations.ItemJSON) mediaQueueManager
+                .getQueueTrack(position).getDescription().getExtras()
+                    .getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
         holder.setSkippable(tmpQueueItem.attributes.skippable);
 
         holder.titleView.setText(tmpQueueItem.attributes.audioTitle);
         holder.hrefView.setText(tmpQueueItem.href);
 
-        holder.imageView.setImageResource(R.drawable.blank_image);
+        holder.imageView.setImageResource(R.drawable.if_radio_scaled_600);
         if (tmpQueueItem.links.hasImage()) {
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(this.context);
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
             fileCache.getImage(
                     tmpQueueItem.links.getValidImage().href,
-                    (FileInputStream fileInputStream, String url) -> {
-                        if (fileInputStream == null) {
+                    (Bitmap bitmap) -> {
+                        if (bitmap == null) {
                             Log.e(TAG, "onBindViewHolder: failed to get image. Check out other logs");
                         } else {
                             activity.runOnUiThread(() -> {
-                                holder.imageView.setImageBitmap(BitmapFactory.decodeStream(fileInputStream));
+                                holder.imageView.setImageBitmap(bitmap);
                             });
                         }
                     },
@@ -90,9 +91,14 @@ public class ContentQueueRecyclerViewAdapter
         if (tmpQueueItem.links.getValidAudio().progressTracker.isFullyDownloaded()) {
             //finished downloading setup the view
             holder.progressSpeed.setVisibility(View.GONE);
-            //TODO replace all 100% Downloaded (there are two of them) with R.string...
-            String percentage = "100% Downloaded";
+            String percentage = context.getString(R.string.one_hundred_pecent_downloaded);
             holder.progressPercent.setText(percentage);
+            holder.progressBar.setVisibility(View.GONE);
+        } else {
+            //else
+            holder.progressSpeed.setText(Util.getBytesPerSecString(0));
+            holder.progressSpeed.setVisibility(View.VISIBLE);
+            holder.progressPercent.setText(context.getString(R.string.in_download_queue));
             holder.progressBar.setVisibility(View.GONE);
         }
 
@@ -100,10 +106,7 @@ public class ContentQueueRecyclerViewAdapter
         if (tmpQueueItem.attributes.skippable) {
             //only enable if skippable
             holder.closeImageButton.setOnClickListener((View v) -> {
-                int removedIndex = contentQueuePlayingListener.remove(tmpQueueItem);
-                if (removedIndex >= 0) {
-                    notifyItemRemoved(removedIndex);
-                }
+                listener.remove(tmpQueueItem);
             });
         } else {
             //hide button else
@@ -112,9 +115,7 @@ public class ContentQueueRecyclerViewAdapter
 
         holder.view.setOnClickListener((View v) -> {
             if (null != listener) {
-                // Notify the active callbacks interface (the activity, if the
-                // fragment is attached to one) that an item has been selected.
-                listener.onListFragmentInteraction(tmpQueueItem.href);
+                Log.d(TAG, "onBindViewHolder: clicked: " + tmpQueueItem.href);
             }
         });
     }
@@ -125,12 +126,7 @@ public class ContentQueueRecyclerViewAdapter
     }
 
     public void removeItem(APIRecommendations.ItemJSON itemJSON) {
-        int position = contentQueuePlayingListener.remove(itemJSON);
-        if (position >= 0) {
-            notifyItemRemoved(position);
-        } else {
-            Log.e(TAG, "removeItem: could not remove item [" + itemJSON + "]");
-        }
+        listener.remove(itemJSON);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
@@ -177,12 +173,12 @@ public class ContentQueueRecyclerViewAdapter
 
     @Override
     public void onItemDismiss(int position) {
-        contentQueuePlayingListener.remove(position);
+        listener.remove(position);
         notifyItemRemoved(position);
     }
 
     @Override
     public void onItemDrop(int fromPosition, int toPosition) {
-        contentQueuePlayingListener.swap(fromPosition, toPosition);
+        listener.swap(fromPosition, toPosition);
     }
 }

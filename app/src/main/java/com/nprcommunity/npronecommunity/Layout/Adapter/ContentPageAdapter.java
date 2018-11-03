@@ -8,6 +8,8 @@ import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
 
+import java.util.Observable;
+
 public class ContentPageAdapter extends FragmentPagerAdapter {
 
     //Should setup with getItem and be congruent, or things will break
@@ -17,22 +19,22 @@ public class ContentPageAdapter extends FragmentPagerAdapter {
         QUEUE
     }
 
-    private BackgroundAudioService backgroundAudioService;
+    private Observable tileObservable;
     private ContentQueueFragment currentContentQueueFragment;
 
-    public ContentPageAdapter(FragmentManager fm, BackgroundAudioService backgroundAudioService) {
+    public ContentPageAdapter(FragmentManager fm, Observable tileObservable) {
         super(fm);
-        this.backgroundAudioService = backgroundAudioService;
+        this.tileObservable = tileObservable;
     }
 
     @Override
     public Fragment getItem(int position) {
         //Grab the recommendations fragment if position is 0
         if (position == 0) {
-            return ContentRecommendationsFragment.newInstance(backgroundAudioService);
+            return ContentRecommendationsFragment.newInstance(tileObservable);
         }
         //Grab the content queue if position is anything else
-        currentContentQueueFragment = ContentQueueFragment.newInstance(backgroundAudioService);
+        currentContentQueueFragment = ContentQueueFragment.newInstance();
         return currentContentQueueFragment;
     }
 

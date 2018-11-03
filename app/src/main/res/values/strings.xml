@@ -36,4 +36,8 @@
     <string name="nav_item_image_dialog_message">This is the total size of the cached images. This job is run periodically in the background to clean up images.</string>
     <string name="nav_item_audio_dialog_title">Audio Cache Size</string>
     <string name="nav_item_audio_dialog_message">This is the size of the audio files that you have stored. When an item is removed from the queue the file is deleted from cache.</string>
+    <string name="player_stopped">Player Stopped</string>
+    <string name="rewind">Rewind 10 seconds</string>
+    <string name="one_hundred_pecent_downloaded">100% Downloaded</string>
+    <string name="in_download_queue">In Download Queue...</string>
 </resources>

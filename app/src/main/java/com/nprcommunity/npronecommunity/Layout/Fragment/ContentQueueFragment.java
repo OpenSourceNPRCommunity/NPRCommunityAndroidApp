@@ -12,10 +12,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
+import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentQueueRecyclerViewAdapter;
 import com.nprcommunity.npronecommunity.Layout.Callback.ContentQueueCallback;
-import com.nprcommunity.npronecommunity.Layout.Callback.ContentQueuePlayingListener;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
@@ -27,9 +26,8 @@ import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
  */
 public class ContentQueueFragment extends Fragment {
 
-    private OnListFragmentInteractionListener mListener;
+    private OnListFragmentInteractionListener listener;
     private RecyclerView recyclerView;
-    private ContentQueuePlayingListener contentQueuePlayingListener;
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
@@ -37,9 +35,8 @@ public class ContentQueueFragment extends Fragment {
      */
     public ContentQueueFragment() {}
 
-    public static ContentQueueFragment newInstance(ContentQueuePlayingListener listener) {
+    public static ContentQueueFragment newInstance() {
         ContentQueueFragment fragment = new ContentQueueFragment();
-        fragment.contentQueuePlayingListener = listener;
         return fragment;
     }
 
@@ -66,8 +63,7 @@ public class ContentQueueFragment extends Fragment {
             //Setup the drag callback and movable
             ContentQueueRecyclerViewAdapter contentQueueRecyclerViewAdapter =
                     new ContentQueueRecyclerViewAdapter(
-                            mListener,
-                            contentQueuePlayingListener,
+                            listener,
                             context,
                             ContentQueueFragment.this.getActivity()
                     );
@@ -96,7 +92,7 @@ public class ContentQueueFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         if (context instanceof OnListFragmentInteractionListener) {
-            mListener = (OnListFragmentInteractionListener) context;
+            listener = (OnListFragmentInteractionListener) context;
         } else {
             throw new RuntimeException(context.toString()
                     + " must implement OnListFragmentInteractionListener");
@@ -106,7 +102,7 @@ public class ContentQueueFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
+        listener = null;
     }
 
     public View getView(int position) {
@@ -130,18 +126,9 @@ public class ContentQueueFragment extends Fragment {
         return recyclerView.getAdapter();
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p/>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
     public interface OnListFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onListFragmentInteraction(String queueItemURL);
+        void remove(int position);
+        void remove(APIRecommendations.ItemJSON itemJSON);
+        void swap(int fromPosition, int toPosition);
     }
 }

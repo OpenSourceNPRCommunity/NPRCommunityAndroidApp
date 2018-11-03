@@ -1124,7 +1124,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 try {
                     Thread.sleep(250);
                 } catch (InterruptedException e) {
-                    Log.e(TAG, "onProgressChanged: failed to sleep", e);
+                    Log.e(TAG, "startSeekUpdateThread: failed to sleep", e);
                 }
             }
         }).start();

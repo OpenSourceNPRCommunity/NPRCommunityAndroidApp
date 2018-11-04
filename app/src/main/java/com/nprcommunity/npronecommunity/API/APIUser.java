@@ -9,6 +9,9 @@ import com.squareup.moshi.Moshi;
 import java.io.IOException;
 import java.util.List;
 
+import okio.Okio;
+import okio.Source;
+
 public class APIUser extends API {
     private static String TAG = "API.USER";
     private UserJSON userJSON;
@@ -30,7 +33,7 @@ public class APIUser extends API {
             try {
                 userJSON = jsonAdapter.fromJson(jsonData);
             } catch (IOException e) {
-                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "executeFun: Error adapting json data to user: ", e);
             }
         }
     }

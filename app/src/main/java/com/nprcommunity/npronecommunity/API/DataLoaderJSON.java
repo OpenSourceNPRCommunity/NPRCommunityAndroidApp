@@ -1,61 +1,44 @@
 package com.nprcommunity.npronecommunity.API;
 
-import android.app.Activity;
 import android.os.AsyncTask;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpResponse;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
-//import com.orhanobut.hawk.Hawk;
-import com.squareup.moshi.JsonAdapter;
-import com.squareup.moshi.Moshi;
-
 import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.List;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class DataLoaderJSON extends AsyncTask<String, Void, Boolean> {
     private static String TAG = "API.DataLoaderJSON";
     private String responseJSON;
     private API responseFunc;
     private APIDataResponse apiDataResponse;
+    private final OkHttpClient okHttpClient;
 
-    public DataLoaderJSON(API responseFunc, APIDataResponse apiDataResponse) {
+    public DataLoaderJSON(API responseFunc, APIDataResponse apiDataResponse, @NonNull OkHttpClient okHttpClient) {
         super();
         this.responseFunc = responseFunc;
         this.apiDataResponse = apiDataResponse;
+        this.okHttpClient = okHttpClient;
     }
 
     protected Boolean doInBackground(String... urlAndToken) {
-        GenericUrl url = new GenericUrl(urlAndToken[0]);
-        HttpHeaders headers = new HttpHeaders();
-        List<String> list = new ArrayList<>();
-        list.add("Bearer " + urlAndToken[1]);
-        headers.set("Authorization", list);
-        HttpTransport transport = new NetHttpTransport();
-        HttpResponse response = null;
-        try {
-            HttpRequest request = transport.createRequestFactory().buildGetRequest(url);
-            request.setHeaders(headers);
-            response = request.execute();
-            responseJSON = response.parseAsString();
+        Request request = new Request.Builder()
+                .url(urlAndToken[0])
+                .addHeader("Authorization", "Bearer " + urlAndToken[1])
+                .build();
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                Log.w(TAG, "doInBackground: response unsuccessful: url[" + urlAndToken [0] +
+                        "] response code: " + response.code());
+                return false;
+            }
+            responseJSON = response.body().string();
             return true;
         } catch (IOException e) {
-            Log.e(TAG, "doInBackground", e);
-            responseJSON = null;
-        } finally {
-            if (response != null) {
-                try {
-                    response.disconnect();
-                } catch (IOException e) {
-                    Log.e(TAG, "doInBackground: Failed to disconnect", e);
-                }
-            }
+            Log.e(TAG, "doInBackground: failed to get call", e);
         }
         return false;
     }

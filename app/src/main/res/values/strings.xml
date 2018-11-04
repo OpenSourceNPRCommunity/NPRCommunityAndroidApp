@@ -40,4 +40,8 @@
     <string name="rewind">Rewind 10 seconds</string>
     <string name="one_hundred_pecent_downloaded">100% Downloaded</string>
     <string name="in_download_queue">In Download Queue...</string>
+    <string name="error_alert_message_default">There was an error accessing this data. Please check your internet or report this error to us.</string>
+    <string name="error_alert_title_default">Error Retrieving Data</string>
+    <string name="error_alert_title_recommendation">Error Retrieving Podcast Data</string>
+    <string name="unknown">Unknown</string>
 </resources>

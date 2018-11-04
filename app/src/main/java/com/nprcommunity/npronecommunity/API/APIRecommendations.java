@@ -19,6 +19,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import okio.Okio;
+import okio.Source;
+
 public class APIRecommendations extends API {
     private static String TAG = "API.RECOMMENDATIONS";
 
@@ -45,14 +48,14 @@ public class APIRecommendations extends API {
                 if (recommendationsJSON != null && recommendationsJSON.isValidRecommendations()) {
                     cleanRecommendation(recommendationsJSON);
                 } else {
-                    Log.e(TAG, "callback: Error invalid recommendation");
+                    Log.e(TAG, "executeFun: Error invalid recommendation");
                 }
                 //Set data
                 RecommendationCache recommendationsCache = new RecommendationCache(recommendationsJSON, URL);
                 JSONCache.putObject(URL, recommendationsCache);
                 data = recommendationsCache;
             } catch (IOException e) {
-                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "executeFunc: Error adapting json data to user", e);
             }
         }
     }
@@ -189,7 +192,7 @@ public class APIRecommendations extends API {
                         donateUrl;
     }
 
-    public class AtomicIntegerAdapter {
+    public static class AtomicIntegerAdapter {
         @FromJson AtomicInteger fromJson(String atomicIntegerJSON) {
             AtomicInteger atomicInteger = null;
             try {

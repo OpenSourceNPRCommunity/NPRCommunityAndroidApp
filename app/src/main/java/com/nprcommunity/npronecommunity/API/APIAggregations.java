@@ -10,8 +10,13 @@ import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.util.List;
+
+import okio.BufferedSource;
+import okio.Okio;
+import okio.Source;
 
 public class APIAggregations extends API {
     private static String TAG = "API.AGGREGATIONS";
@@ -30,21 +35,21 @@ public class APIAggregations extends API {
     @Override
     public void executeFunc(String jsonData, Boolean success) {
         if(success) {
-            Moshi moshi = new Moshi.Builder().build();
+            Moshi moshi = new Moshi.Builder().add(new APIRecommendations.AtomicIntegerAdapter()).build();
             JsonAdapter<AggregationJSON> jsonAdapter = moshi.adapter(AggregationJSON.class);
             try {
                 AggregationJSON aggregationsJSON = jsonAdapter.fromJson(jsonData);
                 if (aggregationsJSON != null && aggregationsJSON.isValidAggregation()) {
                     cleanAggregation(aggregationsJSON);
                 } else {
-                    Log.e(TAG, "callback: Error invalid aggregations");
+                    Log.e(TAG, "executeFun: Error invalid aggregations");
                 }
                 //Set data
                 AggregationsCache aggregationsCache = new AggregationsCache(aggregationsJSON, URL);
                 JSONCache.putObject(URL, aggregationsCache);
                 data = aggregationsCache;
             } catch (IOException e) {
-                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "executeFunc: Error adapting json data to user", e);
             }
         }
     }

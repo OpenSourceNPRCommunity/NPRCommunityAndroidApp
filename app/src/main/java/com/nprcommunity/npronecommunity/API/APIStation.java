@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import okio.Okio;
+import okio.Source;
+
 public class APIStation extends API {
     private static String TAG = "API.STATION";
     public static final String DEFAULT_STATION_URL = "https://station.api.npr.org/v3/stations";
@@ -39,7 +42,7 @@ public class APIStation extends API {
                 //Set data
                 data = stationJSON;
             } catch (IOException e) {
-                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "executeFunc: Error adapting json data to user", e);
             }
         }
     }

@@ -14,6 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import okio.Okio;
+import okio.Source;
+
 public class APIChannels extends API {
     private static String TAG = "API.CHANNELS";
     public static final String DEFAULT_CHANNELS_URL = "https://listening.api.npr.org/v2/channels";
@@ -57,7 +60,7 @@ public class APIChannels extends API {
                 JSONCache.putObject(URL, baseCache);
                 data = baseCache;
             } catch (IOException e) {
-                Log.e(TAG, "callback: Error adapting json data to user: " + jsonData);
+                Log.e(TAG, "executeFun: Error adapting json data to user", e);
             }
         }
     }

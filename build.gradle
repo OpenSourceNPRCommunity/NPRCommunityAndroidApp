@@ -5,9 +5,14 @@ buildscript {
     repositories {
         google()
         jcenter()
+        maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.2.1'
+
+        //NOTE USED FOR UI TESTING :: START
+        classpath 'com.airbnb.okreplay:gradle-plugin:1.4.0'
+        //NOTE USED FOR UI TESTING :: ENx
 
 
         // NOTE: Do not place your application dependencies here; they belong

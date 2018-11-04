@@ -12,9 +12,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.APIAggregations;
+import com.nprcommunity.npronecommunity.Layout.ErrorAlert;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.TileDialogFragment;
 import com.nprcommunity.npronecommunity.R;
@@ -70,7 +72,7 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                     AggregationsCache aggregationsData = APIAggregations.getData();
                     if (aggregationsData == null || aggregationsData.data == null) {
                         Log.e(TAG, "onBindViewHolder: APIAggregations data is null");
-                        //todo display error with toast
+                        ErrorAlert.CreateError(context, context.getString(R.string.error_alert_title_recommendation));
                     } else {
                         Log.d(TAG, "onBindViewHolder: APIAggregations got data!");
 
@@ -83,7 +85,7 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                         );
                         if (tileDialogFragment == null) {
                             Log.e(TAG, "onBindViewHolder: error null");
-                            //TODO make toast or something or error
+                            ErrorAlert.CreateError(context, context.getString(R.string.error_alert_title_recommendation));
                         } else {
                             tileDialogFragment.show(activity.getFragmentManager(), "tiledialog");
                         }

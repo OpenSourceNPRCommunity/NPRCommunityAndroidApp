@@ -606,7 +606,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //lock screen icon for pre lollipop
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-            String unknown = "UNKNWON";
+            String unknown = getString(R.string.unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,

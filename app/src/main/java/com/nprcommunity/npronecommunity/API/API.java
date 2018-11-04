@@ -1,10 +1,17 @@
 package com.nprcommunity.npronecommunity.API;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 
+import com.nprcommunity.npronecommunity.Config;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.BaseCache;
 import com.nprcommunity.npronecommunity.Store.JSONCache;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
+
+import java.io.InputStream;
+
+import okhttp3.OkHttpClient;
+import okio.Source;
 
 public abstract class API {
     public String URL_BASE = "https://api.npr.org",
@@ -13,7 +20,7 @@ public abstract class API {
 
     protected Object data;
 
-    private API() {}
+    private OkHttpClient okHttpClient = Config.OK_HTTP_CLIENT;
 
     public API(Context context) {
         tokenManager = new SettingsAndTokenManager(context);
@@ -34,7 +41,7 @@ public abstract class API {
             //Insteads skips to execute function
             apiDataResponse.executeFunc();
         } else {
-            DataLoaderJSON dataLoader = new DataLoaderJSON(this, apiDataResponse);
+            DataLoaderJSON dataLoader = new DataLoaderJSON(this, apiDataResponse, okHttpClient);
             dataLoader.execute(URL, tokenManager.getToken());
         }
     }

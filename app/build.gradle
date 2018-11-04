@@ -1,4 +1,7 @@
 apply plugin: 'com.android.application'
+//NOTE USED FOR UI TESTING :: START
+apply plugin: 'okreplay'
+//NOTE USED FOR UI TESTING :: END
 
 android {
     compileSdkVersion 28
@@ -34,30 +37,30 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    // Grant all runtime permissions when installing an apk from the command line or android studio. For now this is only required for
+    // the OkReplay library (https://github.com/airbnb/okreplay) as it requires the EXTERNAL STORAGE permission to record the server
+    // responses.
+    adbOptions {
+        installOptions "-g"
+    }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.android.support:cardview-v7:27.1.1'
-    implementation 'com.android.support:recyclerview-v7:27.1.1'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
-    implementation 'com.android.support:support-v4:27.1.1'
-    implementation 'com.android.support:design:27.1.1'
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation 'com.android.support:cardview-v7:28.0.0'
+    implementation 'com.android.support:recyclerview-v7:28.0.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
+    implementation 'com.android.support:support-v4:28.0.0'
+    implementation 'com.android.support:design:28.0.0'
     implementation 'com.squareup.moshi:moshi:1.5.0'
     testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.1'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.orhanobut:hawk:2.0.1'
-    //    implementation 'io.requery:requery:1.5.1'
-    //    implementation 'io.requery:requery-android:1.5.1'
-    //    implementation 'com.squareup.okhttp3:okhttp-urlconnection:3.10.0'
-    //    implementation 'com.squareup.picasso:picasso:2.71828'
-    //    implementation 'com.nytimes.android:cache3:3.0.1'
-    //    implementation 'com.nytimes.android:store3:3.0.1'
-    //    implementation 'com.nytimes.android:store-kotlin3:3.0.1'
-    //    implementation 'com.nytimes.android:middleware3:3.0.1'
-    //    implementation 'com.nytimes.android:filesystem3:3.0.1'
-    //    implementation 'io.paperdb:paperdb:2.6'
+    debugImplementation 'com.airbnb.okreplay:okreplay:1.4.0'
+    releaseImplementation 'com.airbnb.okreplay:noop:1.4.0'
+    androidTestImplementation 'com.airbnb.okreplay:espresso:1.4.0'
+    androidTestImplementation 'com.android.support.test:rules:1.0.2'
 }

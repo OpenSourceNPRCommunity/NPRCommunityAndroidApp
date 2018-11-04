@@ -3,18 +3,18 @@ package com.nprcommunity.npronecommunity.API;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.google.api.client.http.ByteArrayContent;
-import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpResponse;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
 import com.nprcommunity.npronecommunity.Config;
+import com.squareup.moshi.JsonAdapter;
+import com.squareup.moshi.Moshi;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class StationSender {
 
@@ -24,6 +24,11 @@ public class StationSender {
     private int TIMEOUT = 10000; //10 second timeout for connect
     private int stationId;
     public static final String DEFAULT_URL = "https://identity.api.npr.org/v2/stations";
+
+    private OkHttpClient okHttpClient = new OkHttpClient.Builder()
+            .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
+            .readTimeout(TIMEOUT, TimeUnit.SECONDS)
+            .build();
 
     private StationSender(){}
 
@@ -45,31 +50,27 @@ public class StationSender {
     public void sendAsyncStation(StationSenderInterface stationSenderInterface) {
         if (Config.ENABLE_STATION_SENDER) {
             new Thread(() -> {
+
                 boolean success = false;
-                //endpoint expects ratingJSON to be in an array
-                String str = "[" + stationId + "]";
-                GenericUrl url = new GenericUrl(StationSender.this.url);
-                HttpHeaders headers = new HttpHeaders();
-                List<String> list = new ArrayList<>();
-                list.add("Bearer " + StationSender.this.token);
-                headers.set("Authorization", list);
-                HttpTransport transport = new NetHttpTransport();
-                try {
-                    HttpRequest request = transport.createRequestFactory()
-                            .buildPutRequest(
-                                    url,
-                                    ByteArrayContent.fromString("application/json", str)
-                            );
-                    request.setHeaders(headers);
-                    request.setConnectTimeout(TIMEOUT);
-                    request.setReadTimeout(TIMEOUT);
-                    HttpResponse response = request.execute();
-                    Log.i(TAG, "sendAsyncStation: successfully sent for [" + stationId + "]");
-                    stationSenderInterface.execAfter(response.isSuccessStatusCode());
+                Moshi moshi = new Moshi.Builder().build();
+                JsonAdapter<APIRecommendations.RatingJSON> jsonAdapter = moshi.adapter(APIRecommendations.RatingJSON.class);
+                Request request = new Request.Builder()
+                        .url(StationSender.this.url)
+                        .addHeader("Authorization", "Bearer " + StationSender.this.token)
+                        .post(RequestBody.create(MediaType.parse("application/json"),
+                                "[" + stationId + "]"))
+                        .build();
+                try (Response response = okHttpClient.newCall(request).execute()) {
+                    Log.i(TAG, "sendAsyncStation: successfully sent");
+                    if (!response.isSuccessful()) {
+                        Log.w(TAG, "sendAsyncStation: response unsuccessful: url[" + url +
+                                "] response code: " + response.code());
+                    }
+                    success = response.isSuccessful();
                 } catch (IOException e) {
-                    Log.e(TAG, "sendAsyncStation", e);
-                    stationSenderInterface.execAfter(false);
+                    Log.e(TAG, "sendAsyncStation: failed to get call", e);
                 }
+                stationSenderInterface.execAfter(success);
             }).start();
         }
     }

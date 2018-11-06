@@ -751,6 +751,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 mediaPlayer.seekTo(seekVal);
             }
         }
+        currentMedia.attributes.rating.elapsed.getAndSet(millisecond/1000);
+        mediaQueueManager.forceSaveQueue();
     }
 
     /**
@@ -919,6 +921,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
     @Override
     public void onSeekComplete(MediaPlayer mp) {
+        currentMedia.attributes.rating.elapsed.getAndSet(mp.getCurrentPosition()/1000);
         if (isPlaying) {
             setMediaPlaybackState(PlaybackState.STATE_PLAYING);
         } else {

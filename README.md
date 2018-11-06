@@ -48,22 +48,11 @@ Overall Goals:
 - Testing - I need to add it 
 
 Immediate Goals:
-- [X] Auto loading of next items in queue (will load next 4 from recommendations)
-- [X] Set up sending updates to npr for progress of audio
-- [X] Set auto channel items
-- [X] Select Station
-- [X] Sponsorship disable skipping
-- [X] Logout
-- [X] Images delete old version with job scheduler
-    - [X] On Logout delete local content
-- [X] Debug Version Check option
+- Share Button
+- Data Stopped and Started background
 - Add time and date of podcast to queue and fragment info
-- Add size of file to queue
 - Check for internet and timeout, display errors for HTTP Calls
-- Disable sound if not already playing even though is open
-- Add in activity thing in dropdown
 - Add in activity thing on off screen
-- Add waiting to audio files that are in the queue
 
 ### Long Term not as important goals, but have been on my mind...
 

@@ -2,7 +2,6 @@ package com.nprcommunity.npronecommunity.Layout.Fragment;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -18,8 +17,6 @@ import android.widget.TextView;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Util;
-
-import java.io.FileInputStream;
 
 public class ContentMediaPlayerFragment extends Fragment {
 
@@ -187,7 +184,7 @@ public class ContentMediaPlayerFragment extends Fragment {
             String hrefImage = listener.getMediaImage();
             //if the image is not a drawable (aka the media has its own image, then we load it)
             if (hrefImage != null) {
-                fileCache.getImage(
+                fileCache.getImageAsync(
                         hrefImage,
                         (Bitmap bitmap) -> {
                             if (bitmap == null) {

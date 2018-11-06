@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -25,7 +24,6 @@ import com.nprcommunity.npronecommunity.Background.MediaQueueManager;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 
-import java.io.FileInputStream;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -203,7 +201,7 @@ public class TileDialogFragment extends DialogFragment implements Observer {
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(activity);
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
-            fileCache.getImage(
+            fileCache.getImageAsync(
                     aggregationJSON.links.getValidImage().href,
                     (Bitmap bitmap) -> {
                         if (bitmap == null) {

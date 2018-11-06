@@ -485,10 +485,7 @@ public class Navigate extends AppCompatActivity
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mediaControllerCompat.getPlaybackState().getState() != PlaybackStateCompat.STATE_PLAYING) {
-            mediaControllerCompat.getTransportControls().pause();
-        }
-
+        mediaControllerCompat.getTransportControls().stop();
         mediaBrowserCompat.disconnect();
     }
 

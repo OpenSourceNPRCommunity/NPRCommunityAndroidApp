@@ -122,8 +122,7 @@ public class APIRecommendations extends API {
 
     public static class AttributesJSON implements Serializable {
         private static final String DEFAULT_DESCRIPTION = "Unknown Description";
-        private static final String DEFAULT_TITLE = "Unknown Title",
-                                    DEFAULT_AUDIO_TITLE = "Unknown Title";
+        private static final String DEFAULT_TITLE = "Unknown Title";
 
         public String type,
                 uid,
@@ -170,7 +169,7 @@ public class APIRecommendations extends API {
             }
 
             if (audioTitle == null || audioTitle.equals("")) {
-                audioTitle = DEFAULT_AUDIO_TITLE;
+                audioTitle = title;
             }
         }
 

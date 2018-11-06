@@ -64,7 +64,8 @@ public class RatingSender {
         if (Config.ENABLE_RATING_SENDER) {
             new Thread(() -> {
 
-                Moshi moshi = new Moshi.Builder().build();
+                Moshi moshi = new Moshi.Builder()
+                        .add(new APIRecommendations.AtomicIntegerAdapter()).build();
                 JsonAdapter<APIRecommendations.RatingJSON> jsonAdapter = moshi.adapter(APIRecommendations.RatingJSON.class);
                 Request request = new Request.Builder()
                         .url(RatingSender.this.url)

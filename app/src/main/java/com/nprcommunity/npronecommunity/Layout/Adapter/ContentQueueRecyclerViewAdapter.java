@@ -3,7 +3,6 @@ package com.nprcommunity.npronecommunity.Layout.Adapter;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,8 +21,6 @@ import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment.OnL
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Util;
-
-import java.io.FileInputStream;
 
 public class ContentQueueRecyclerViewAdapter
         extends RecyclerView.Adapter<ContentQueueRecyclerViewAdapter.ViewHolder>
@@ -67,7 +64,7 @@ public class ContentQueueRecyclerViewAdapter
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(this.context);
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
-            fileCache.getImage(
+            fileCache.getImageAsync(
                     tmpQueueItem.links.getValidImage().href,
                     (Bitmap bitmap) -> {
                         if (bitmap == null) {

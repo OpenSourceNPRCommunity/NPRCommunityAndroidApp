@@ -36,6 +36,7 @@ import com.nprcommunity.npronecommunity.API.APIDataResponse;
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.RatingSender;
 import com.nprcommunity.npronecommunity.API.Shared;
+import com.nprcommunity.npronecommunity.Navigate;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.RecommendationCache;
 import com.nprcommunity.npronecommunity.Store.FileCache;
@@ -85,6 +86,10 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     private static final Object lock = new Object();
     private volatile boolean loadingLineUp = false;
     private boolean foregroundStarted = false;
+
+    private static final int NOTIFICATION_ID = 1526;
+
+    private Thread seekThread = null;
 
     private final int MAX_AUDIO_LEVEL = 100;
 
@@ -339,6 +344,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (seekThread != null && seekThread.isAlive()) {
+            seekThread.interrupt();
+        }
         mediaQueueManager.forceSaveQueue();
         setMediaPlaybackState(PlaybackStateCompat.STATE_STOPPED);
         unregisterReceiver(noisyReceiver);
@@ -358,7 +366,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         }
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         audioManager.abandonAudioFocus(this);
-        NotificationManagerCompat.from(this).cancel(1);
+        NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
     }
 
     @Override
@@ -460,6 +468,62 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         mediaSessionCompat.setPlaybackState(playbackstateBuilder.build());
     }
 
+    private void showBufferingNotification() {
+        MediaStyleHelper mediaStyleHelper = new MediaStyleHelper();
+        NotificationCompat.Builder builder = mediaStyleHelper.from(mediaSessionCompat);
+        if (builder == null) {
+            return;
+        }
+
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_replay_10_white_40dp,
+                        getString(R.string.rewind),
+                        null
+                )
+        );
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_more_horiz_white_24dp,
+                        getString(R.string.buffering),
+                        null
+                )
+        );
+        if (hasNextMedia()) {
+            builder.addAction(new NotificationCompat.Action(
+                            R.drawable.ic_skip_next_white_24dp,
+                            getString(R.string.next),
+                            MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                    this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                            )
+                    )
+            );
+        }
+        builder.addAction(new NotificationCompat.Action(
+                        R.drawable.ic_close_white_24dp,
+                        getString(R.string.close),
+                        MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                this, PlaybackStateCompat.ACTION_STOP
+                        )
+                )
+        );
+        builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().
+                setShowActionsInCompactView(1).setMediaSession(mediaSessionCompat.getSessionToken()));
+        builder.setSmallIcon(R.mipmap.ic_launcher);
+        builder.setOngoing(true);
+
+        Intent notificationIntent = new Intent(getApplicationContext(), Navigate.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent intent = PendingIntent.getActivity(getApplicationContext(), 0,
+                notificationIntent, 0);
+        builder.setContentIntent(intent);
+        if (!foregroundStarted) {
+            startForeground(NOTIFICATION_ID, builder.build());
+            foregroundStarted = true;
+        } else {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
+        }
+    }
+
     private void showPlayingNotification() {
         MediaStyleHelper mediaStyleHelper = new MediaStyleHelper();
         NotificationCompat.Builder builder = mediaStyleHelper.from(mediaSessionCompat);
@@ -485,14 +549,16 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 )
             )
         );
-        builder.addAction(new NotificationCompat.Action(
-                        R.drawable.ic_skip_next_white_24dp,
-                        getString(R.string.next),
-                        MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                        )
-                )
-        );
+        if (hasNextMedia()) {
+            builder.addAction(new NotificationCompat.Action(
+                            R.drawable.ic_skip_next_white_24dp,
+                            getString(R.string.next),
+                            MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                    this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                            )
+                    )
+            );
+        }
         builder.addAction(new NotificationCompat.Action(
                         R.drawable.ic_close_white_24dp,
                         getString(R.string.close),
@@ -502,14 +568,22 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 )
         );
         builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().
-                setShowActionsInCompactView(1, 2).setMediaSession(mediaSessionCompat.getSessionToken()));
+                setShowActionsInCompactView(1).setMediaSession(mediaSessionCompat.getSessionToken()));
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setOngoing(true);
+
+        Intent notificationIntent = new Intent(getApplicationContext(), Navigate.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent intent = PendingIntent.getActivity(getApplicationContext(), 0,
+                notificationIntent, 0);
+        builder.setContentIntent(intent);
         if (!foregroundStarted) {
-            startForeground(1, builder.build());
+            startForeground(NOTIFICATION_ID, builder.build());
             foregroundStarted = true;
+        } else {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
         }
-        NotificationManagerCompat.from(this).notify(1, builder.build());
     }
 
     private void showPausedNotification() {
@@ -535,14 +609,16 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                         )
                 )
         );
-        builder.addAction(new NotificationCompat.Action(
-                        R.drawable.ic_skip_next_white_24dp,
-                        getString(R.string.next),
-                        MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                        )
-                )
-        );
+        if (hasNextMedia()) {
+            builder.addAction(new NotificationCompat.Action(
+                            R.drawable.ic_skip_next_white_24dp,
+                            getString(R.string.next),
+                            MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                    this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                            )
+                    )
+            );
+        }
         builder.addAction(new NotificationCompat.Action(
                         R.drawable.ic_close_white_24dp,
                         getString(R.string.close),
@@ -552,13 +628,24 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                 )
         );
         builder.setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
-                .setShowActionsInCompactView(1, 2).setMediaSession(mediaSessionCompat.getSessionToken()));
+                .setShowActionsInCompactView(1).setMediaSession(mediaSessionCompat.getSessionToken()));
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setOngoing(false);
-        NotificationManagerCompat.from(this).notify(1, builder.build());
+
+        Intent notificationIntent = new Intent(getApplicationContext(), Navigate.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent intent = PendingIntent.getActivity(getApplicationContext(), 0,
+                notificationIntent, 0);
+        builder.setContentIntent(intent);
+        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
     }
 
     private void setMediaSessionMetadata() {
+        // set the queue
+        mediaSessionCompat.setQueue(mediaQueueManager.getMediaQueue());
+
+        // update metadata
         MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder();
 
         if (currentMedia != null) {
@@ -568,16 +655,18 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
                         BitmapFactory.decodeResource(getResources(), R.drawable.if_radio_scaled_600));
             // load in actual image
-            fileCache.getImage(
-                    currentMedia.href,
-                    (Bitmap bitmap) -> {
-                        metadataBuilder.putBitmap(
-                                MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
-                                bitmap
-                        );
-                    },
-                    null
-            );
+            Bitmap displayImage = fileCache.getImageSync(currentMedia.href);
+            if (displayImage != null) {
+                metadataBuilder.putBitmap(
+                        MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
+                        displayImage
+                );
+            } else {
+                metadataBuilder.putBitmap(
+                        MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
+                        BitmapFactory.decodeResource(getResources(), R.drawable.if_radio_scaled_600)
+                );
+            }
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             //lock screen icon for pre lollipop
@@ -621,8 +710,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, null);
         }
 
-
-        //TODO TODO more metadata options
         mediaSessionCompat.setMetadata(metadataBuilder.build());
     }
 
@@ -910,7 +997,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
             //sets the metadata for this next track
             setMediaSessionMetadata();
-
+            if (foregroundStarted) {
+                showBufferingNotification();
+            }
             setMediaPlaybackState(PlaybackState.STATE_SKIPPING_TO_NEXT);
 
             //grab next media if <= 2 songs
@@ -1096,8 +1185,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     }
 
     private void startSeekUpdateThread() {
-        //TODO maybe not use thread? but have observer for each second to update?
-        new Thread(() -> {
+        seekThread = new Thread(() -> {
             int lastSeek = getMediaCurrentPosition()/1000;
             int currentSeek;
             int i = 0;
@@ -1127,7 +1215,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     Log.e(TAG, "startSeekUpdateThread: failed to sleep", e);
                 }
             }
-        }).start();
+        });
+        seekThread.start();
     }
 
     /**

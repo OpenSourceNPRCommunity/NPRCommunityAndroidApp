@@ -1,32 +1,21 @@
 package com.nprcommunity.npronecommunity.Layout.Adapter;
 
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.support.v7.app.AlertDialog;
-import android.text.Layout;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.nprcommunity.npronecommunity.API.APIAggregations;
-import com.nprcommunity.npronecommunity.API.APISearch;
 import com.nprcommunity.npronecommunity.API.APIStation;
 import com.nprcommunity.npronecommunity.API.StationSender;
-import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
-import com.nprcommunity.npronecommunity.Layout.Fragment.TileDialogFragment;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 
-import java.io.FileInputStream;
 import java.util.List;
 
 public class StationListAdapter extends ArrayAdapter<APIStation.ItemJSON> {
@@ -99,7 +88,7 @@ public class StationListAdapter extends ArrayAdapter<APIStation.ItemJSON> {
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(activity);
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
-            fileCache.getImage(
+            fileCache.getImageAsync(
                     item.links.getValidBrand().href,
                     (Bitmap bitmap) -> {
                         if (bitmap == null) {

@@ -3,7 +3,6 @@ package com.nprcommunity.npronecommunity.Layout.Adapter;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -12,7 +11,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.APIAggregations;
@@ -23,7 +21,6 @@ import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.AggregationsCache;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 
-import java.io.FileInputStream;
 import java.util.List;
 import java.util.Observable;
 
@@ -110,7 +107,7 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
             //only run if has an image
             FileCache fileCache = FileCache.getInstances(this.context);
             // Loads image async, checks storage, if not found, downloads, saves and then returns the input stream
-            fileCache.getImage(
+            fileCache.getImageAsync(
                     itemJSON.links.getValidImage().href,
                     (Bitmap bitmap) -> {
                         if (bitmap == null) {

@@ -177,10 +177,18 @@ public class FileCache {
         return null;
     }
 
-    public void getImage(String filename, CacheResponseImage cacheResponseImage,
-                         ProgressCallback progressCallback) {
-        String path = getFilePath(filename, Type.IMAGE);
 
+
+    /**
+     * Does NOT block. Only checks cache. Returns null if not found.
+     */
+    public Bitmap getImageSync(String filename) {
+        //check if image is in memory cache
+        return getCacheImage(filename);
+    }
+
+    public void getImageAsync(String filename, CacheResponseImage cacheResponseImage,
+                              ProgressCallback progressCallback) {
         //check if image is in memory cache
         Bitmap cacheImage = getCacheImage(filename);
         if (cacheImage != null) {
@@ -216,13 +224,13 @@ public class FileCache {
                                 }
                             }
                         } catch (Exception e) {
-                            Log.w(TAG, "getImage: failed to set last modified: " + filename, e);
+                            Log.w(TAG, "getImageAsync: failed to set last modified: " + filename, e);
                         }
                     }
                     try {
                         Thread.sleep(waitTime);
                     } catch (InterruptedException e) {
-                        Log.e(TAG, "getImage: could not sleep");
+                        Log.e(TAG, "getImageAsync: could not sleep");
                     }
                     //exponential backoff, max wait time will be about ~3 seconds
                     waitTime *= startWaitTime;
@@ -248,7 +256,7 @@ public class FileCache {
                                 // wait till the file is free
                                 if (fileExists(filename, Type.IMAGE)) {
                                     if (!waitTillFree(filename, Type.IMAGE, 5000)) {
-                                        Log.e(TAG, "getImage: Failed to download image: " + filename);
+                                        Log.e(TAG, "getImageAsync: Failed to download image: " + filename);
                                         return;
                                     }
                                 }
@@ -310,16 +318,26 @@ public class FileCache {
     }
 
     public void deleteAllFiles() {
-        File[] files = getFiles(Type.IMAGE);
-        for (File file: files) {
-            if (!file.delete()) {
-                Log.e(TAG, "deleteAllFiles: failed to delete image: " + file.getName());
+        File dir = new File(IMAGE_PATH);
+        if (dir.exists())
+        {
+            String[] children = dir.list();
+            for (int i = 0; i < children.length; i++)
+            {
+                if (!(new File(dir, children[i]).delete())) {
+                    Log.e(TAG, "deleteAllFiles: error deleting file: " + children[i]);
+                }
             }
         }
-        files = getFiles(Type.AUDIO);
-        for (File file: files) {
-            if (!file.delete()) {
-                Log.e(TAG, "deleteAllFiles: failed to delete audio: " + file.getName());
+        dir = new File(AUDIO_PATH);
+        if (dir.exists())
+        {
+            String[] children = dir.list();
+            for (int i = 0; i < children.length; i++)
+            {
+                if (!(new File(dir, children[i]).delete())) {
+                    Log.e(TAG, "deleteAllFiles: error deleting file: " + children[i]);
+                }
             }
         }
     }

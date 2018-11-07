@@ -53,6 +53,7 @@ Immediate Goals:
 - Check for internet and timeout, display errors for HTTP Calls
 - Action button (button) and (action) for aggregation recommendations
 - (More option) for more podcast
+- Add previous list to reload
 
 ### Long Term not as important goals, but have been on my mind...
 
@@ -76,9 +77,6 @@ Immediate Goals:
     
 - Rating
     - Start - send update after 5 minutes https://dev.npr.org/guide/services/listening/#Ratings 
-    - ThumbsUP - https://dev.npr.org/guide/services/listening/#Ratings
-        - not super important but we should have it
-        - optional update for the other one
 
 # Thanks to:
 https://www.iconfinder.com/icons/1054997/audio_radio_icon for the icon

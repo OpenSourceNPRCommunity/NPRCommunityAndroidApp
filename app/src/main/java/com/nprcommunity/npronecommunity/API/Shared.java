@@ -23,6 +23,9 @@ public class Shared {
             if (progressTracker == null) {
                 progressTracker = new Shared.Progress();
             }
+            this.image = "";
+            this.provider = "";
+            this.href = "";
         }
     }
 

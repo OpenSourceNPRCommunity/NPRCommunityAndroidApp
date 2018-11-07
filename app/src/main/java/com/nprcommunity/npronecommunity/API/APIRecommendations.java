@@ -265,7 +265,10 @@ public class APIRecommendations extends API {
         }
 
         public Shared.ImageJSON getValidImage() {
-            return image.get(0);
+            if (image != null && image.size() > 0) {
+                return image.get(0);
+            }
+            return new Shared.ImageJSON();
         }
 
         public boolean hasRecommendations() {

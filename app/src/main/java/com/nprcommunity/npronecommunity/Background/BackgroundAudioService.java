@@ -707,6 +707,14 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     currentMedia.attributes.audioTitle);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,
                     currentMedia.attributes.title);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM,
+                    currentMedia.attributes.album);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_AUTHOR,
+                    currentMedia.attributes.program);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST,
+                    currentMedia.attributes.program);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST,
+                    currentMedia.attributes.program);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, getMediaDuration());
@@ -726,12 +734,20 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //lock screen icon for pre lollipop
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-            String unknown = getString(R.string.unknown);
+            String unknown = "YES";//getString(R.string.unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE,
                     unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,
+                    unknown);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM,
+                    unknown);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_AUTHOR,
+                    unknown);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST,
+                    unknown);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST,
                     unknown);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);

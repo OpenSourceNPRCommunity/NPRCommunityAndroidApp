@@ -684,23 +684,15 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             //Notification icon in card
 
             // load in actual image
-            Bitmap displayImage = fileCache.getImageSync(currentMedia.href);
-            if (displayImage != null) {
-                metadataBuilder.putBitmap(
-                        MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
-                        displayImage
-                );
-            } else {
-                metadataBuilder.putBitmap(
-                        MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
-                        BitmapFactory.decodeResource(getResources(), R.drawable.if_radio_scaled_600)
-                );
+            Bitmap displayImage = fileCache.getImageSync(currentMedia.links.getValidImage().href);
+            if (displayImage == null) {
+                displayImage = BitmapFactory.decodeResource(getResources(), R.drawable.if_radio_scaled_600);
             }
-            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                    BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, displayImage);
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, displayImage);
             //lock screen icon for pre lollipop
-            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART,
-                    BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, displayImage);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     currentMedia.attributes.audioTitle);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE,
@@ -1111,14 +1103,16 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     if (prepareAndPlay) {
                         playMedia = true;
                         currentMedia = itemJSON;
+                        setMediaSessionMetadata();
+                        setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
                         mediaPlayer.prepareAsync();
                     } else if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
                         playMedia = false;
+                        setMediaSessionMetadata();
+                        setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
                         mediaPlayer.prepareAsync();
                     }
                 }
-                setMediaSessionMetadata();
-                setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
             } catch (IOException e) {
                 Log.e(TAG, "nextMediaHelper: setting data source [" +
                         currentMedia + "]", e);

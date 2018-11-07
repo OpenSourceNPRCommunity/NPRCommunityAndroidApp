@@ -1,6 +1,7 @@
 package com.nprcommunity.npronecommunity.Layout.Fragment;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,10 +11,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.nprcommunity.npronecommunity.API.RatingSender;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Util;
@@ -26,6 +30,8 @@ public class ContentMediaPlayerFragment extends Fragment {
     private TextView mediaPlayerSeekBarTextLeft, mediaPlayerSeekBarTextCenter, mediaPlayerSeekBarTextRight, mediaPlayerTitle, mediaPlayerDesc;
     private SeekBar mediaPlayerSeekBar;
     private ImageView mediaPlayerImageView;
+    private ImageButton mediaPlayerShare, mediaPlayThumbsUp;
+    private boolean ratingSent = false;
 
     public ContentMediaPlayerFragment() {}
 
@@ -47,6 +53,25 @@ public class ContentMediaPlayerFragment extends Fragment {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.content_media_player_fragment, container, false);
         //setup fragment
+        mediaPlayerShare = view.findViewById(R.id.media_player_share);
+        mediaPlayerShare.setOnClickListener((View v) -> {
+            if (listener != null) {
+                Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+                sharingIntent.setType("text/plain");
+                String shareBody = "NPR Story: " + listener.getAudioTitle() + " " + listener.getShareUrl();
+                sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "NPR Story");
+                sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+                startActivity(Intent.createChooser(sharingIntent, "Share via"));
+            }
+        });
+        mediaPlayThumbsUp = view.findViewById(R.id.media_player_like);
+        mediaPlayThumbsUp.setOnClickListener((View v) -> {
+            Context context = getContext();
+            if (listener != null && !ratingSent && context != null) {
+                v.setBackground(context.getDrawable(R.drawable.ic_star_filled_white_24dp));
+                listener.sendRatingThumbsUp();
+            }
+        });
         mediaPlayerSeekBarTextLeft = view.findViewById(R.id.media_player_seek_bar_text_left);
         mediaPlayerSeekBarTextCenter = view.findViewById(R.id.media_player_seek_bar_text_center);
         mediaPlayerSeekBarTextRight = view.findViewById(R.id.media_player_seek_bar_text_right);
@@ -229,5 +254,8 @@ public class ContentMediaPlayerFragment extends Fragment {
         int getCurrentPosition();
         boolean isMediaSkippable();
         String getMediaImage();
+        String getShareUrl();
+        void sendRatingThumbsUp();
+        String getAudioTitle();
     }
 }

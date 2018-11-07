@@ -54,6 +54,7 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.REMOVE_ITEM;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.SEND_RATING_TIMEOUT;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.SWAP;
+import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.THUMBS_UP_RATING;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.PLAY_MEDIA_NOW_QUEUE_ITEM;
 
 /**
@@ -166,6 +167,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                         CommandCompatExtras.ADD_ITEM_OBJECT.name()
                         )
                 );
+            } else if (THUMBS_UP_RATING.name().equals(command)) {
+                sendRatingUpdate(RatingSender.Type.THUMBUP);
             }
         }
 
@@ -248,7 +251,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         PLAY_MEDIA_NOW,
         REMOVE_INDEX,
         REMOVE_ITEM,
-        ADD_ITEM
+        ADD_ITEM,
+        THUMBS_UP_RATING
     }
 
     public enum CommandCompatExtras {
@@ -445,17 +449,45 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     }
 
     private void setMediaPlaybackState(int state) {
+        float playbackSpeed = 0f;
+        long next = hasNextMedia() ? PlaybackStateCompat.ACTION_SKIP_TO_NEXT : 0;
         PlaybackStateCompat.Builder playbackstateBuilder = new PlaybackStateCompat.Builder();
         if (state == PlaybackStateCompat.STATE_PLAYING) {
+            playbackSpeed = 1.0f;
             playbackstateBuilder.setActions(
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PAUSE |
-                    PlaybackStateCompat.ACTION_REWIND | PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                    PlaybackStateCompat.ACTION_STOP);
-        } else {
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE |
+                    PlaybackStateCompat.ACTION_PAUSE |
+                    PlaybackStateCompat.ACTION_REWIND |
+                    PlaybackStateCompat.ACTION_STOP |
+                    next
+            );
+        } else if (state == PlaybackStateCompat.STATE_PAUSED){
+            playbackSpeed = 0f;
             playbackstateBuilder.setActions(
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PLAY |
-                    PlaybackStateCompat.ACTION_REWIND | PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                    PlaybackStateCompat.ACTION_STOP
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE |
+                    PlaybackStateCompat.ACTION_PLAY |
+                    PlaybackStateCompat.ACTION_REWIND |
+                    PlaybackStateCompat.ACTION_STOP |
+                    next
+            );
+        } else if (state == PlaybackStateCompat.STATE_BUFFERING) {
+            playbackSpeed = 0f;
+            playbackstateBuilder.setActions(
+                    PlaybackStateCompat.ACTION_STOP |
+                    next
+            );
+        } else if (state == PlaybackStateCompat.STATE_SKIPPING_TO_NEXT) {
+            playbackSpeed = 0f;
+            playbackstateBuilder.setActions(
+                    PlaybackStateCompat.ACTION_STOP |
+                    next
+            );
+        } else if (state == PlaybackStateCompat.STATE_REWINDING) {
+            playbackSpeed = -1.0f;
+            playbackstateBuilder.setActions(
+                    PlaybackStateCompat.ACTION_REWIND |
+                    PlaybackStateCompat.ACTION_STOP |
+                    next
             );
         }
 
@@ -463,7 +495,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         playbackstateBuilder.setExtras(bundle);
         playbackstateBuilder.setState(state,
                 currentMedia == null ? 0 : currentMedia.attributes.rating.elapsed.get() * 1000,
-                0
+                playbackSpeed
         );
         mediaSessionCompat.setPlaybackState(playbackstateBuilder.build());
     }
@@ -651,9 +683,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         if (currentMedia != null) {
             //Notification icon in card
 
-            //set default image
-            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
-                        BitmapFactory.decodeResource(getResources(), R.drawable.if_radio_scaled_600));
             // load in actual image
             Bitmap displayImage = fileCache.getImageSync(currentMedia.href);
             if (displayImage != null) {
@@ -674,8 +703,10 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
                     currentMedia.attributes.audioTitle);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE,
+                    currentMedia.attributes.audioTitle);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,
-                    currentMedia.attributes.description);
+                    currentMedia.attributes.title);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
             metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, getMediaDuration());
@@ -697,6 +728,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
             String unknown = getString(R.string.unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE,
+                    unknown);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE,
                     unknown);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE,
                     unknown);
@@ -1228,8 +1261,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     public void sendRatingUpdate(RatingSender.Type type) {
         if (currentMedia != null) {
             //set the current media information
+            currentMedia.attributes.rating.rating = type.name();
             if (type.equals(RatingSender.Type.COMPLETED)) {
-                currentMedia.attributes.rating.rating = type.name();
                 currentMedia.attributes.rating.elapsed.set(currentMedia.attributes.rating.duration);
             }
             //Note: the elapsed is continuously set by background thread

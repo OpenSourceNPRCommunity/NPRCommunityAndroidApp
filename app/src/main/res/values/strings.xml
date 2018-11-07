@@ -45,4 +45,6 @@
     <string name="error_alert_title_recommendation">Error Retrieving Podcast Data</string>
     <string name="unknown">Unknown</string>
     <string name="buffering">Buffering</string>
+    <string name="interested_button">Interestd In.</string>
+    <string name="share">Share</string>
 </resources>

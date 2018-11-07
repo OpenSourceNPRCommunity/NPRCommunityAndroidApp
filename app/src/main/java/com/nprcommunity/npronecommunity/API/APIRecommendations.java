@@ -241,7 +241,7 @@ public class APIRecommendations extends API {
         public List<AudioJSON> audio;
         public List<Shared.ImageJSON> image;
         public List<Shared.WebJSON> web;
-        public List<OnRampsJSON> onramps;
+        public List<OnRampsJSON> onramps; //shareable link
         public List<UpJSON> up;
         public List<AttributesRecommendationsJSON> recommendations;
         public List<RatingsJSON> ratings;
@@ -274,6 +274,10 @@ public class APIRecommendations extends API {
 
         public boolean hasUp() {
             return up != null && up.size() > 0;
+        }
+
+        public boolean hasOnramp() {
+            return onramps != null && onramps.size() > 0;
         }
     }
 

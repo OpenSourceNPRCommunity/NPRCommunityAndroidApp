@@ -32,6 +32,8 @@ import android.widget.Toast;
 
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.Background.BackgroundAudioService;
+import com.nprcommunity.npronecommunity.Background.MediaQueueManager;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentPageAdapter;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentQueueRecyclerViewAdapter;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentMediaPlayerFragment;
@@ -717,6 +719,34 @@ public class Navigate extends AppCompatActivity
         return mediaControllerCompat.getMetadata()
                 .getString(METADATA_KEY_IMAGE_HREF);
 
+    }
+
+    @Override
+    public String getShareUrl() {
+        if (MediaQueueManager.getInstance(this).queueSize() > 0) {
+            Bundle bundle = MediaQueueManager.getInstance(this)
+                    .getQueueTrack(0).getDescription().getExtras();
+            if (bundle != null) {
+                APIRecommendations.ItemJSON itemJSON = ((APIRecommendations.ItemJSON)bundle
+                                .getSerializable(LineUpQueue.ApiItem.API_ITEM.name()));
+                if (itemJSON != null && itemJSON.links.hasOnramp()) {
+                    return itemJSON.links.onramps.get(0).href;
+                }
+            }
+        }
+        return getApplication().getString(R.string.unknown);
+    }
+
+    @Override
+    public void sendRatingThumbsUp() {
+        mediaControllerCompat.sendCommand(BackgroundAudioService.CommandCompat.THUMBS_UP_RATING.name(),
+                null, null);
+    }
+
+    @Override
+    public String getAudioTitle() {
+        return mediaControllerCompat.getMetadata()
+                .getString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE);
     }
 
     @Override

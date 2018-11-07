@@ -51,9 +51,8 @@ Immediate Goals:
 - Data Stopped and Started background
 - Add time and date of podcast to queue and fragment info
 - Check for internet and timeout, display errors for HTTP Calls
-- Add in activity thing on off screen
 - Action button (button) and (action) for aggregation recommendations
-- More option for more podcast
+- (More option) for more podcast
 
 ### Long Term not as important goals, but have been on my mind...
 

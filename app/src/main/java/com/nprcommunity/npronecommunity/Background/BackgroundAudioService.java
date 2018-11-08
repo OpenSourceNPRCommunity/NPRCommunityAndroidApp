@@ -101,9 +101,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     private BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                mediaPlayer.pause();
-            }
+            pauseMedia();
         }
     };
     private MediaSessionCompat.Callback mediaSessionCallback = new MediaSessionCompat.Callback() {
@@ -673,6 +671,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
     }
 
+    /**
+     * Sets the media session metadata based off of the current media that is playing
+     */
     private void setMediaSessionMetadata() {
         // set the queue
         mediaSessionCompat.setQueue(mediaQueueManager.getMediaQueue());

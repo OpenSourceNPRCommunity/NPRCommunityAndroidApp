@@ -50,7 +50,6 @@ Overall Goals:
 Immediate Goals:
 - Action button (button) and (action) for aggregation recommendations
 - (More option) for more podcast
-- Add previous list to reload
 - Notifications listen for updates
 
 ### Long Term not as important goals, but have been on my mind...

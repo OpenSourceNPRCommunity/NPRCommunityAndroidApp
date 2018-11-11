@@ -21,15 +21,33 @@
                 android:textSize="20dp"
                 android:layout_gravity="center_horizontal"
                 android:layout_alignParentTop="true"/>
+
             <TextView
-                android:text="Description"
+                android:text="Description al;kdjf lkasjd ;lfkasjd;lfka jslkjasldkfjaowejf;oiawm;voiawnionaw;oif nawoeinf oawine f;oaiwne f;oiawnef nawefnawoienfoiawnefoinaw efoinaweo;if"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/dialog_row_description"
                 android:textSize="15dp"
                 android:layout_gravity="center_horizontal"
                 android:layout_below="@+id/dialog_row_title"
-                android:minLines="2"/>
+                android:layout_toStartOf="@+id/dialog_row_expand_collapse"
+                android:minLines="2"
+                android:maxLines="2"
+                android:ellipsize="end"
+                />
+
+            <ImageButton
+                android:id="@+id/dialog_row_expand_collapse"
+                android:layout_width="37dp"
+                android:layout_height="37dp"
+                android:layout_alignParentEnd="true"
+                android:layout_below="@id/dialog_row_title"
+                android:background="@drawable/ic_keyboard_arrow_up_white_24dp"
+                android:contentDescription="@string/close"
+                android:layout_marginEnd="10dp"
+                android:rotation="180"
+                android:backgroundTint="@color/colorDisabled"/>
+
             <TextView
                 android:id="@+id/dialog_row_href_id"
                 android:layout_width="wrap_content"

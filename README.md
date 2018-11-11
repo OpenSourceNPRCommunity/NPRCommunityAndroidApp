@@ -54,9 +54,6 @@ Immediate Goals:
 
 ### Long Term not as important goals, but have been on my mind...
 
-- [X] Some type of Icon
-- Pause Button Bluetooth
-
 - Testing
     - Any sort of testing... got to get on that for some stability. I have been more interested 
     in developing features for now... I know that is not the best form of coding, but I will 
@@ -64,11 +61,7 @@ Immediate Goals:
 
 - Shows Fragment
     - [ ] Implement loading when click on shows
-    - [ ] Implement progress visual for play button when download and when downloaded completely
 
-- Downloading
-    - [ ] Allow for picking up where a download left off instead of complete redownload
-    
 - Search
     - [ ] Add in option to search for more if a show/channel pops up
     

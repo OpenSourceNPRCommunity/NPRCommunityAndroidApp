@@ -1,5 +1,6 @@
 package com.nprcommunity.npronecommunity.Layout.Fragment;
 
+import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -13,7 +14,9 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -24,6 +27,8 @@ import com.nprcommunity.npronecommunity.Background.MediaQueueManager;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.ProgressCallback;
+
+import org.w3c.dom.Text;
 
 import java.util.Observable;
 import java.util.Observer;
@@ -244,9 +249,37 @@ public class TileDialogFragment extends DialogFragment implements Observer {
             //setup unique href id for this row item
             ((TextView)recommendation.findViewById(R.id.dialog_row_href_id))
                     .setText(tmpQueueItem.href);
-            ((TextView)recommendation.findViewById(R.id.dialog_row_description)).setText(
+            TextView textViewDescription = recommendation.findViewById(R.id.dialog_row_description);
+            textViewDescription.setText(
                     tmpQueueItem.attributes.description
             );
+            textViewDescription.setOnClickListener((v) -> {
+                TextView tmpTextView = (TextView)v;
+                int maxLines = 2;
+                ObjectAnimator animation = ObjectAnimator.ofInt(tmpTextView, "maxLines",
+                        tmpTextView.getMaxLines() <= maxLines ? 1000 : maxLines);
+                animation.setDuration(100).start();
+
+                ImageButton tmpImageButton = ((ViewGroup)v.getParent()).findViewById(R.id.dialog_row_expand_collapse);
+                if (tmpImageButton.getRotation() == 180) {
+                    tmpImageButton.animate().rotation(360).start();
+                } else {
+                    tmpImageButton.animate().rotation(180).start();
+                }
+            });
+            recommendation.findViewById(R.id.dialog_row_expand_collapse).setOnClickListener((v) -> {
+                int maxLines = 2;
+                TextView tmpTextView = ((ViewGroup)v.getParent()).findViewById(R.id.dialog_row_description);
+                ObjectAnimator animation = ObjectAnimator.ofInt(tmpTextView, "maxLines",
+                        tmpTextView.getMaxLines() <= maxLines ? 1000 : maxLines);
+                animation.setDuration(100).start();
+
+                if (v.getRotation() == 180) {
+                    v.animate().rotation(360).start();
+                } else {
+                    v.animate().rotation(180).start();
+                }
+            });
             recommendationsList.addView(recommendation);
 
             //set add to queue button

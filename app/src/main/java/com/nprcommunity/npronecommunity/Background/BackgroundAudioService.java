@@ -31,15 +31,19 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.nprcommunity.npronecommunity.API.APIDataResponse;
 import com.nprcommunity.npronecommunity.API.APIRecommendations;
 import com.nprcommunity.npronecommunity.API.RatingSender;
 import com.nprcommunity.npronecommunity.API.Shared;
+import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.Navigate;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.RecommendationCache;
+import com.nprcommunity.npronecommunity.Store.DownloadPoolExecutor;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 import com.nprcommunity.npronecommunity.Util;
 import com.orhanobut.hawk.Hawk;
@@ -56,6 +60,8 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.SWAP;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompat.THUMBS_UP_RATING;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.PLAY_MEDIA_NOW_QUEUE_ITEM;
+import static com.nprcommunity.npronecommunity.Store.DownloadPoolExecutor.MediaType.AUDIO;
+import static com.nprcommunity.npronecommunity.Store.DownloadPoolExecutor.MediaType.IMAGE;
 
 /**
  * Thanks to  Paul Trebilcox-Ruiz tutorial for helping with all the media compat android stuff.
@@ -78,7 +84,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
     private FileCache fileCache;
     private AudioManager audioManager;
     private SettingsAndTokenManager settingsAndTokenManager;
-    private MediaQueueDownloadManager mediaQueueDownloadManager;
     private boolean isPrepared = false,
             isPlaying = false,
             wasPlayingBeforeLostFocus = false,
@@ -366,6 +371,10 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         } else {
             Log.d(TAG, "stopAndReleaseMedia: media player is null");
         }
+
+        DownloadPoolExecutor.getInstance(IMAGE).forceShutdown();
+        DownloadPoolExecutor.getInstance(AUDIO).forceShutdown();
+
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         audioManager.abandonAudioFocus(this);
         NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
@@ -432,12 +441,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         IntentFilter filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
         registerReceiver(noisyReceiver, filter);
 
-        mediaQueueDownloadManager = new MediaQueueDownloadManager(
-                mediaQueueManager,
-                mediaSessionCompat,
-                fileCache,
-                this
-        );
+        // starts download of all items in queue not already downloaded
+        setupQueueDownloads();
 
         nextMedia(false);
 
@@ -908,7 +913,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             }
         }
 
-        mediaQueueDownloadManager.removeItem(position, mediaQueueManager.getAPIQueueTrack(position));
+        downloadStopAndRemove(mediaQueueManager.getAPIQueueTrack(position));
         mediaQueueManager.remove(position);
         if (position == 0) {
             nextMediaHelper(true, false);
@@ -1026,7 +1031,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             if (currentMedia != null && removeTrack) {
                 mediaQueueManager.remove(currentMedia);
                 //remove item from download
-                mediaQueueDownloadManager.removeItem(0, currentMedia);
+                downloadStopAndRemove(currentMedia);
                 //send update
                 if (isCompleted) {
                     //if is completed send that
@@ -1055,70 +1060,154 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             if (currentMedia == null) {
                 Log.e(TAG, "nextMedia: failed to peek the next track");
             } else {
-                if(!mediaQueueDownloadManager.waitForResponse(
-                        0,
-                        currentMedia,
-                        mediaDownloadedCallback(prepareAndPlay, currentMedia)
-                )) {
-                    Log.i(TAG, "nextMediaHelper: already waiting for response!! [" +
-                            currentMedia + "]");
-                }
+                downloadAndPlayItem(currentMedia, prepareAndPlay);
             }
         } else {
             Log.d(TAG, "nextMedia: media player is null");
         }
     }
 
-    private MediaQueueDownloadReadyCallback mediaDownloadedCallback(boolean prepareAndPlay,
-                                                                    APIRecommendations.ItemJSON itemJSON) {
-        return (boolean success, FileInputStream fileInputStream) -> {
-            try {
-                if (fileInputStream == null) {
-                    //send media error to front end ui
-                    Bundle bundleMediaError = new Bundle();
-                    bundleMediaError.putString(ACTION, BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name());
-                    bundleMediaError.putString(
-                            BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
-                            getString(R.string.error_media_not_found)
-                    );
-                    bundleMediaError.putSerializable(
-                            BackgroundAudioService.ActionExtras.MEDIA_ERROR_LOADING_REMOVE_ITEM.name(),
-                            itemJSON
-                    );
-                    mediaSessionCompat.sendSessionEvent(
-                            BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
-                            bundleMediaError
-                    );
-                    Log.e(TAG, "mediaDownloadedCallback: error fileInputStream not found [" +
-                            currentMedia + "]");
-                    return;
-                }
+    private void downloadAndPlayItem(APIRecommendations.ItemJSON itemJSON, boolean prepareAndPlay) {
+        APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
+        ProgressCallback progressCallback = (progress, total, speed) -> {
+            //this is progress for audio loading
+            Log.d(TAG, "startDownload: progress loading audio: "
+                    + audioJSON.href + " at "
+                    + " progress [" + progress + "] total [" + total + "] "
+                    + " percent [" + ((double)progress)/((double)total));
+            audioJSON.progressTracker.setProgress(progress);
+            audioJSON.progressTracker.setTotal(total);
 
-                //Reset the audio to be able to set to the new track
-                synchronized (lock) {
-                    mediaPlayer.reset();
-                    //set the audio source
-                    mediaPlayer.setDataSource(
-                            fileInputStream.getFD()
-                    );
-                    if (prepareAndPlay) {
-                        playMedia = true;
-                        currentMedia = itemJSON;
-                        setMediaSessionMetadata();
-                        setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
-                        mediaPlayer.prepareAsync();
-                    } else if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
-                        playMedia = false;
-                        setMediaSessionMetadata();
-                        setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
-                        mediaPlayer.prepareAsync();
+            //force save
+            mediaQueueManager.forceSaveQueue();
+
+            Bundle bundleMediaProgress = new Bundle();
+            bundleMediaProgress.putString(
+                    ACTION,
+                    BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name()
+            );
+            double percentage = audioJSON.progressTracker.getPercentage();
+            bundleMediaProgress.putIntArray(
+                    BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                    new int[] {
+                            speed, //in nanoseconds
+                            (int)(percentage*100), //get percentage
+                    }
+            );
+            bundleMediaProgress.putString(
+                    BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
+                    itemJSON.href
+            );
+            mediaSessionCompat.sendSessionEvent(
+                    BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                    bundleMediaProgress
+            );
+        };
+        fileCache.getAudio(audioJSON.href,
+                progressCallback,
+                (FileInputStream fileInputStream, String url) -> {
+                    if (fileInputStream == null) {
+                        //todo todo todo set return error type if failed
+                        //something failed set full downloaded to false
+                        audioJSON.progressTracker.setIsFullyDownloaded(false);
+                        Bundle bundleMediaError = new Bundle();
+                        bundleMediaError.putString(
+                                ACTION, BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name()
+                        );
+                        bundleMediaError.putString(
+                                BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
+                                getApplicationContext().getString(R.string.error_media_not_found)
+                        );
+                        bundleMediaError.putSerializable(
+                                BackgroundAudioService.ActionExtras.MEDIA_ERROR_LOADING_REMOVE_ITEM.name(),
+                                itemJSON
+                        );
+                        mediaSessionCompat.sendSessionEvent(
+                                BackgroundAudioService.Action.MEDIA_ERROR_LOADING.name(),
+                                bundleMediaError
+                        );
+                    } else {
+                        //success set the fully downloaded and file input stream
+
+                        //update progress to complete
+                        //doesnt matter, download is complete successfully notify frontend
+                        progressCallback.updateProgress(1, 1, 0);
+
+                        //set fully downloaded
+                        audioJSON.progressTracker.setIsFullyDownloaded(true);
+
+                        //Reset the audio to be able to set to the new track
+                        synchronized (lock) {
+                            mediaPlayer.reset();
+                            //set the audio source
+                            try {
+                                mediaPlayer.setDataSource(fileInputStream.getFD());
+                                if (prepareAndPlay) {
+                                    playMedia = true;
+                                    currentMedia = itemJSON;
+                                    setMediaSessionMetadata();
+                                    setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
+                                    mediaPlayer.prepareAsync();
+                                } else if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
+                                    playMedia = false;
+                                    setMediaSessionMetadata();
+                                    setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
+                                    mediaPlayer.prepareAsync();
+                                }
+                            } catch (IOException e) {
+                                //failed to play audio
+                                Log.e(TAG, "mediaDownloadSuccess: failed to play audio", e);
+                                Toast.makeText(this, R.string.error_playing, Toast.LENGTH_LONG).show();
+                            }
+                        }
                     }
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "nextMediaHelper: setting data source [" +
-                        currentMedia + "]", e);
+        );
+    }
+
+    /**
+     * Called once at init. Starts downloads of all items in queue that are not fully
+     * downloaded.
+     */
+    private void setupQueueDownloads() {
+        List<MediaSessionCompat.QueueItem> itemJSONList = mediaQueueManager.getMediaQueue();
+        for (int i = 0; i < itemJSONList.size(); i++) {
+            APIRecommendations.ItemJSON itemJSON = (APIRecommendations.ItemJSON) itemJSONList.get(i)
+                    .getDescription().getExtras().getSerializable(LineUpQueue.ApiItem.API_ITEM.name());
+            APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
+            Shared.Progress progress = audioJSON.progressTracker;
+            if (!progress.isFullyDownloaded()) {
+                //isnt fully downloaded setup download
+                Bundle bundleMediaProgress = new Bundle();
+                bundleMediaProgress.putString(
+                        ACTION,
+                        BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name()
+                );
+                bundleMediaProgress.putIntArray(
+                        BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                        new int[] {
+                                0, //in nanoseconds
+                                0, //get percentage
+                        }
+                );
+                bundleMediaProgress.putString(
+                        BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
+                        itemJSON.href
+                );
+                mediaSessionCompat.sendSessionEvent(
+                        BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
+                        bundleMediaProgress
+                );
+                downloadAndPlayItem(itemJSON, false);
             }
-        };
+        }
+    }
+
+    private void downloadStopAndRemove(APIRecommendations.ItemJSON itemJSON) {
+        DownloadPoolExecutor.getInstance(AUDIO).stopAndRemove(
+                itemJSON.links.getValidAudio().href
+        );
+        fileCache.deleteFileIfExists(itemJSON.links.getValidAudio().href, FileCache.Type.AUDIO);
     }
 
     private void autoLoadNextUpQueue() {
@@ -1196,7 +1285,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             nextMediaHelper(false, false);
         } else {
             //just starts download by adding to the end of the queue
-            mediaQueueDownloadManager.addItem(mediaQueueManager.queueSize()-1, queueItem);
+            downloadAndPlayItem(queueItem, false);
         }
 
         Bundle bundleMediaAdd = new Bundle();

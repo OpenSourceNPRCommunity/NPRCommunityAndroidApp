@@ -34,7 +34,7 @@ public class FileCache {
                     AUDIO_PATH,
                     IMAGE_PATH;
     public static final int MILLI_SECOND_IN_NANO = 1000000,
-                        MILLI_NOTIFY = 750;
+                        MILLI_NOTIFY = 250;
     private Context context;
     private Map<String, SoftReference<Bitmap>> imageCache = new ConcurrentHashMap<>();
 
@@ -138,7 +138,7 @@ public class FileCache {
         return dir.listFiles();
     }
 
-    private String getFilePath(@NonNull String filename,@NonNull Type type) {
+    public String getFilePath(@NonNull String filename,@NonNull Type type) {
         byte[] digestedFileName = null;
         try {
             MessageDigest messageDigest = MessageDigest.getInstance("MD5");
@@ -240,7 +240,7 @@ public class FileCache {
         } else {
             //The file does not exist
             DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
-                    DownloadPoolExecutor.Type.Image
+                    DownloadPoolExecutor.MediaType.IMAGE
             );
             downloadPoolExecutor.execute(
                 new DownloadMediaTask(
@@ -266,49 +266,64 @@ public class FileCache {
                             cacheResponseImage.callback(tmpCacheImage);
                         },
                         filename,
-                        progressCallback)
+                        progressCallback),
+                    filename,
+                    DownloadPoolExecutor.MediaType.IMAGE
             );
         }
     }
 
-    public DownloadMediaTask getAudio(String filename, boolean forceRedownload,
-                                      CacheResponseMedia cacheResponseMedia, ProgressCallback progressCallback) {
-        String path = getFilePath(filename, Type.AUDIO);
-        if(!forceRedownload && fileExists(filename, Type.AUDIO)) {
-            //The file exists load in the audio
-            FileLock fileLock = null;
-            try {
-                File file = new File(path);
-                FileInputStream in = new FileInputStream(file);
-                fileLock = in.getChannel().lock(0L, Long.MAX_VALUE, true);
-                cacheResponseMedia.callback(in, filename);
-            } catch (FileNotFoundException e) {
-                Log.e(TAG, "getAudio: " + filename, e);
-                cacheResponseMedia.callback(null, null);
-            } catch (IOException e) {
-                Log.e(TAG, "getAudio: " + filename, e);
-                cacheResponseMedia.callback(null, null);
-            } finally {
-                if (fileLock != null) {
-                    try {
-                        fileLock.release();
-                    } catch (IOException e) {
-                        Log.e(TAG, "getAudio: " + filename, e);
-                        cacheResponseMedia.callback(null, null);
-                    }
-                }
+    public void getAudio(String filename,
+                         ProgressCallback progressCallback,
+                         CacheResponseMedia cacheResponseMedia) {
+        DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
+                DownloadPoolExecutor.MediaType.AUDIO
+        );
+        if (!downloadPoolExecutor.inQueue(filename)) {
+            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(
+                    context,
+                    Type.AUDIO,
+                    cacheResponseMedia,
+                    filename,
+                    progressCallback
+            );
+            if (!downloadPoolExecutor.execute(
+                    downloadMediaTask,
+                    filename,
+                    DownloadPoolExecutor.MediaType.AUDIO
+            )) {
+                Log.e(TAG, "getAudio: failed to add audio even though not in queue");
             }
         } else {
-            //The file does not exist
-            DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
-                    DownloadPoolExecutor.Type.Audio
-            );
-            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(context, Type.AUDIO, cacheResponseMedia, filename,
-                            progressCallback);
-            downloadPoolExecutor.execute(downloadMediaTask);
-            return downloadMediaTask;
+            String path = getFilePath(filename, Type.AUDIO);
+            if (fileExists(filename, Type.AUDIO)) {
+                //The file exists load in the audio
+                FileLock fileLock = null;
+                try {
+                    File file = new File(path);
+                    FileInputStream in = new FileInputStream(file);
+                    fileLock = in.getChannel().lock(0L, Long.MAX_VALUE, true);
+                    cacheResponseMedia.callback(in, filename);
+                } catch (FileNotFoundException e) {
+                    Log.e(TAG, "getAudio: " + filename, e);
+                    cacheResponseMedia.callback(null, null);
+                } catch (IOException e) {
+                    Log.e(TAG, "getAudio: " + filename, e);
+                    cacheResponseMedia.callback(null, null);
+                } finally {
+                    if (fileLock != null) {
+                        try {
+                            fileLock.release();
+                        } catch (IOException e) {
+                            Log.e(TAG, "getAudio: " + filename, e);
+                            cacheResponseMedia.callback(null, null);
+                        }
+                    }
+                }
+            } else {
+                Log.e(TAG, "getAudio: file should exist");
+            }
         }
-        return null;
     }
 
     public FileInputStream getInputStream(String filename, Type type) throws FileNotFoundException {

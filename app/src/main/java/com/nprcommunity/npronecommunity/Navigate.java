@@ -572,11 +572,10 @@ public class Navigate extends AppCompatActivity
                 );
 
                 /*
-                 * [0] the current position
-                 * [1] speed in nanoseconds
-                 * [2] percentage
+                 * [0] speed in nanoseconds
+                 * [1] percentage
                  */
-                if (downloadProgressInts != null && downloadProgressInts.length == 3) {
+                if (downloadProgressInts != null && downloadProgressInts.length == 2) {
                     if (contentQueueFragment != null) {
                         View tmpView = contentQueueFragment.getView(
                                 bundle.getString(
@@ -585,9 +584,9 @@ public class Navigate extends AppCompatActivity
                         );
 
                         if (tmpView != null) {
-                            if (downloadProgressInts[2] == 100) {
+                            if (downloadProgressInts[1] == 100) {
                                 //if percentage is 100
-                                String speed = Util.getBytesPerSecString(downloadProgressInts[1]);
+                                String speed = Util.getBytesPerSecString(downloadProgressInts[0]);
                                 tmpView.findViewById(R.id.queue_progress_speed)
                                         .setVisibility(View.GONE);
                                 String percent = getString(R.string.one_hundred_pecent_downloaded);
@@ -598,19 +597,19 @@ public class Navigate extends AppCompatActivity
                                         .setVisibility(View.GONE);
                             } else {
                                 //when downloading update these views
-                                String speed = Util.getBytesPerSecString(downloadProgressInts[1]);
+                                String speed = Util.getBytesPerSecString(downloadProgressInts[0]);
                                 TextView progressSpeed = tmpView.findViewById(R.id.queue_progress_speed);
                                 progressSpeed.setText(
                                         speed
                                 );
                                 progressSpeed.setVisibility(View.VISIBLE);
-                                String percent = downloadProgressInts[2] + "%";
+                                String percent = downloadProgressInts[1] + "%";
                                 ((TextView)tmpView.findViewById(R.id.queue_progress_percent)).setText(
                                         percent
                                 );
                                 ProgressBar progressBar = tmpView.findViewById(R.id.queue_progress_bar);
                                 progressBar.setProgress(
-                                        downloadProgressInts[2]
+                                        downloadProgressInts[1]
                                 );
                                 progressBar.setVisibility(View.VISIBLE);
                             }

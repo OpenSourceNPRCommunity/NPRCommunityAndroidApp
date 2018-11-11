@@ -47,4 +47,5 @@
     <string name="buffering">Buffering</string>
     <string name="interested_button">Interestd In.</string>
     <string name="share">Share</string>
+    <string name="error_playing">Error playing media.</string>
 </resources>

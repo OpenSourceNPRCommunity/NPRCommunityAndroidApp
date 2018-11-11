@@ -23,12 +23,18 @@ import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Util;
 
+import org.joda.time.DateTime;
+
+import java.util.Date;
+
 public class ContentMediaPlayerFragment extends Fragment {
 
     private static String TAG = "CONTENTMEDIAPLAYERFRAGMENT";
     private OnFragmentInteractionListener listener;
 
-    private TextView mediaPlayerSeekBarTextLeft, mediaPlayerSeekBarTextCenter, mediaPlayerSeekBarTextRight, mediaPlayerTitle, mediaPlayerDesc;
+    private TextView mediaPlayerSeekBarTextLeft, mediaPlayerSeekBarTextCenter,
+            mediaPlayerSeekBarTextRight, mediaPlayerTitle, mediaPlayerDesc,
+            mediaPlayerDateAndTime;
     private SeekBar mediaPlayerSeekBar;
     private ImageView mediaPlayerImageView;
     private ImageButton mediaPlayerShare, mediaPlayThumbsUp;
@@ -105,6 +111,7 @@ public class ContentMediaPlayerFragment extends Fragment {
         mediaPlayerTitle = view.findViewById(R.id.media_player_title);
         mediaPlayerDesc = view.findViewById(R.id.media_player_description);
         mediaPlayerImageView = view.findViewById(R.id.media_player_image_view);
+        mediaPlayerDateAndTime = view.findViewById(R.id.media_player_date_time);
         updateMedia();
         return view;
     }
@@ -152,6 +159,15 @@ public class ContentMediaPlayerFragment extends Fragment {
         if (mediaPlayerImageView != null ){
             mediaPlayerImageView.setImageResource(R.drawable.if_radio_scaled_600);
         }
+        if (mediaPlayerDateAndTime != null) {
+            if (listener == null) {
+                mediaPlayerDateAndTime.setVisibility(View.INVISIBLE);
+            } else {
+                mediaPlayerDateAndTime.setVisibility(View.VISIBLE);
+                mediaPlayerDateAndTime.setText(listener.getMediaDateTime()
+                        .toString("E M, d y"));
+            }
+        }
 
         if (mediaPlayerSeekBar != null) {
             mediaPlayerSeekBar.setEnabled(false);
@@ -187,6 +203,17 @@ public class ContentMediaPlayerFragment extends Fragment {
                 mediaPlayerTitle.setText(R.string.nothing_to_play);
             }
         }
+
+        if (mediaPlayerDateAndTime != null) {
+            if (listener == null) {
+                mediaPlayerDateAndTime.setVisibility(View.INVISIBLE);
+            } else {
+                mediaPlayerDateAndTime.setVisibility(View.VISIBLE);
+                mediaPlayerDateAndTime.setText(listener.getMediaDateTime()
+                        .toString("E MMM, d y"));
+            }
+        }
+
         if (mediaPlayerDesc != null) {
             mediaPlayerDesc.setText(
                     listener == null ? "" : listener.getMediaDescription().getDescription()
@@ -255,6 +282,7 @@ public class ContentMediaPlayerFragment extends Fragment {
         @NonNull MediaDescriptionCompat getMediaDescription();
         int getDuration();
         int getCurrentPosition();
+        DateTime getMediaDateTime();
         boolean isMediaSkippable();
         String getMediaImage();
         String getShareUrl();

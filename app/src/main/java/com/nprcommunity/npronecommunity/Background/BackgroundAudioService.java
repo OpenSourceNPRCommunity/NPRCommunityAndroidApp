@@ -48,6 +48,10 @@ import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 import com.nprcommunity.npronecommunity.Util;
 import com.orhanobut.hawk.Hawk;
 
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.ISODateTimeFormat;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
@@ -725,6 +729,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     currentMedia.href);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION,
                     currentMedia.attributes.description);
+            metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DATE,
+                    currentMedia.attributes.date);
             metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, getMediaImage().href);
         } else {
             //Notification icon in card

@@ -63,4 +63,5 @@ dependencies {
     releaseImplementation 'com.airbnb.okreplay:noop:1.4.0'
     androidTestImplementation 'com.airbnb.okreplay:espresso:1.4.0'
     androidTestImplementation 'com.android.support.test:rules:1.0.2'
+    implementation 'joda-time:joda-time:2.10.1'
 }

@@ -48,7 +48,6 @@ Overall Goals:
 - Testing - I need to add it 
 
 Immediate Goals:
-- Add time and date of podcast to queue and fragment info
 - Action button (button) and (action) for aggregation recommendations
 - (More option) for more podcast
 - Add previous list to reload

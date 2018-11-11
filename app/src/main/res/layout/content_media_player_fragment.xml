@@ -25,33 +25,52 @@
             android:layout_centerHorizontal="true"
             />
 
-        <ImageButton
-            android:id="@+id/media_player_share"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_margin="15dp"
+        <TextView
+            android:id="@+id/media_player_date_time"
+            android:text="Tile and Date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="15dp"
+            android:layout_centerHorizontal="true"
             android:layout_below="@+id/media_player_title"
-            android:background="@drawable/ic_menu_share"
-            android:backgroundTint="@color/colorPrimaryDark"
-            android:contentDescription="@string/share"
-            android:foreground="?selectableItemBackgroundBorderless"
             />
 
-        <ImageButton
-            android:id="@+id/media_player_like"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_margin="15dp"
-            android:layout_below="@+id/media_player_title"
-            android:layout_toEndOf="@+id/media_player_share"
-            android:background="@drawable/ic_star_empty_white_24dp"
-            android:backgroundTint="@color/colorPrimaryDark"
-            android:contentDescription="@string/interested_button"
-            android:foreground="?selectableItemBackgroundBorderless"
-            />
+        <RelativeLayout
+            android:id="@+id/media_player_button_area"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/media_player_date_time"
+            android:layout_centerHorizontal="true"
+            >
+
+            <ImageButton
+                android:id="@+id/media_player_share"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_margin="15dp"
+                android:background="@drawable/ic_menu_share"
+                android:backgroundTint="@color/colorPrimaryDark"
+                android:contentDescription="@string/share"
+                android:foreground="?selectableItemBackgroundBorderless"
+                />
+
+            <ImageButton
+                android:id="@+id/media_player_like"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_margin="15dp"
+                android:layout_toEndOf="@+id/media_player_share"
+                android:background="@drawable/ic_star_empty_white_24dp"
+                android:backgroundTint="@color/colorPrimaryDark"
+                android:contentDescription="@string/interested_button"
+                android:foreground="?selectableItemBackgroundBorderless"
+                />
+
+        </RelativeLayout>
+
 
         <ScrollView
-            android:layout_below="@+id/media_player_share"
+            android:layout_below="@+id/media_player_button_area"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             >

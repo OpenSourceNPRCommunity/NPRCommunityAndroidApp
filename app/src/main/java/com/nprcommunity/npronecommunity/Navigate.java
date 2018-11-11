@@ -44,6 +44,12 @@ import com.nprcommunity.npronecommunity.Store.FileCache;
 import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeUtils;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+
 import java.util.List;
 
 import static android.support.v4.media.session.PlaybackStateCompat.STATE_BUFFERING;
@@ -743,6 +749,14 @@ public class Navigate extends AppCompatActivity
     @Override
     public int getCurrentPosition() {
         return (int)mediaControllerCompat.getPlaybackState().getPosition();
+    }
+
+    @Override
+    public DateTime getMediaDateTime() {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ");
+        return dateTimeFormatter.parseDateTime(
+                mediaControllerCompat.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_DATE)
+        );
     }
 
     @Override

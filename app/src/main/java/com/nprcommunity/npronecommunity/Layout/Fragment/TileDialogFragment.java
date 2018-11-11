@@ -23,6 +23,7 @@ import com.nprcommunity.npronecommunity.API.APIAggregations;
 import com.nprcommunity.npronecommunity.Background.MediaQueueManager;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 
 import java.util.Observable;
 import java.util.Observer;
@@ -212,12 +213,14 @@ public class TileDialogFragment extends DialogFragment implements Observer {
                             });
                         }
                     },
-                    (int progress, int total, int speed) -> {
+                    (int progress, int total, int speed, ProgressCallback.Type type) -> {
                         //this is image load for
                         Log.d(TAG, "onBindViewHolder: progress loading aggregation image: "
                                 + aggregationJSON.links.getValidImage().href + " at "
                                 + " progress [" + progress + "] total [" + total + "] "
-                                + " percent [" + ((double)progress)/((double)total));
+                                + " percent [" + ((double)progress)/((double)total)
+                                + " type [" + type.name() + "]"
+                        );
                     }
             );
         }

@@ -20,6 +20,7 @@ import com.nprcommunity.npronecommunity.Layout.Fragment.TileDialogFragment;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.CacheStructures.AggregationsCache;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 
 import java.util.List;
 import java.util.Observable;
@@ -118,12 +119,14 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                             });
                         }
                     },
-                    (int progress, int total, int speed) -> {
+                    (int progress, int total, int speed, ProgressCallback.Type type) -> {
                         //this is progress for image loading for recommendation
                         Log.d(TAG, "onBindViewHolder: progress loading recommendation image: "
                             + itemJSON.links.getValidImage().href + " at "
                             + " progress [" + progress + "] total [" + total + "] "
-                            + " percent [" + ((double)progress)/((double)total));
+                            + " percent [" + ((double)progress)/((double)total)
+                            + " type [" + type.name() + "]"
+                        );
                     }
             );
         }

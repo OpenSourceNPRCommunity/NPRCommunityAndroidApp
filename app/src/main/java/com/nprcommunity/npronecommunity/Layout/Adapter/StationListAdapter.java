@@ -15,6 +15,7 @@ import com.nprcommunity.npronecommunity.API.APIStation;
 import com.nprcommunity.npronecommunity.API.StationSender;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 
 import java.util.List;
 
@@ -99,12 +100,14 @@ public class StationListAdapter extends ArrayAdapter<APIStation.ItemJSON> {
                             });
                         }
                     },
-                    (int progress, int total, int speed) -> {
+                    (int progress, int total, int speed, ProgressCallback.Type type) -> {
                         //this is image load for
                         Log.d(TAG, "getView: progress loading brand image: "
                                 + item.links.getValidBrand().href + " at "
                                 + " progress [" + progress + "] total [" + total + "] "
-                                + " percent [" + ((double)progress)/((double)total));
+                                + " percent [" + ((double)progress)/((double)total)
+                                + " type [" + type.name() + "]"
+                        );
                     }
             );
         }

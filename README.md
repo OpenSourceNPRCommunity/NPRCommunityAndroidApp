@@ -48,9 +48,7 @@ Overall Goals:
 - Testing - I need to add it 
 
 Immediate Goals:
-- Data Stopped and Started background
 - Add time and date of podcast to queue and fragment info
-- Check for internet and timeout, display errors for HTTP Calls
 - Action button (button) and (action) for aggregation recommendations
 - (More option) for more podcast
 - Add previous list to reload

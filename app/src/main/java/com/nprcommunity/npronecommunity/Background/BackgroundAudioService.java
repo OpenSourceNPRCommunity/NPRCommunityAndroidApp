@@ -245,7 +245,10 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         MEDIA_ERROR_LOADING_REMOVE_ITEM,
         MEDIA_NEXT_IS_SKIPPABLE,
         MEDIA_PREPARED_HREF,
-        MEDIA_REMOVED_I
+        MEDIA_REMOVED_I,
+        MEDIA_DOWNLOADING_PROGRESS_SPEED,
+        MEDIA_DOWNLOADING_PROGRESS_PERCENTAGE,
+        MEDIA_DOWNLOADING_PROGRESS_TYPE,
     }
 
     public enum CommandCompat {
@@ -1069,12 +1072,14 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
     private void downloadAndPlayItem(APIRecommendations.ItemJSON itemJSON, boolean prepareAndPlay) {
         APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
-        ProgressCallback progressCallback = (progress, total, speed) -> {
+        ProgressCallback progressCallback = (progress, total, speed, progressCallbackType) -> {
             //this is progress for audio loading
             Log.d(TAG, "startDownload: progress loading audio: "
                     + audioJSON.href + " at "
                     + " progress [" + progress + "] total [" + total + "] "
-                    + " percent [" + ((double)progress)/((double)total));
+                    + " percent [" + ((double)progress)/((double)total)
+                    + " progressCallbackType [" + progressCallbackType.name() + "]"
+            );
             audioJSON.progressTracker.setProgress(progress);
             audioJSON.progressTracker.setTotal(total);
 
@@ -1087,12 +1092,17 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name()
             );
             double percentage = audioJSON.progressTracker.getPercentage();
-            bundleMediaProgress.putIntArray(
-                    BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
-                    new int[] {
-                            speed, //in nanoseconds
-                            (int)(percentage*100), //get percentage
-                    }
+            bundleMediaProgress.putInt(
+                    ActionExtras.MEDIA_DOWNLOADING_PROGRESS_SPEED.name(),
+                    speed //in nanoseconds
+            );
+            bundleMediaProgress.putInt(
+                    ActionExtras.MEDIA_DOWNLOADING_PROGRESS_PERCENTAGE.name(),
+                    (int)(percentage*100) //get percentage
+            );
+            bundleMediaProgress.putString(
+                    ActionExtras.MEDIA_DOWNLOADING_PROGRESS_TYPE.name(),
+                    progressCallbackType.name()
             );
             bundleMediaProgress.putString(
                     BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name(),
@@ -1103,7 +1113,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     bundleMediaProgress
             );
         };
-        fileCache.getAudio(audioJSON.href,
+        fileCache.getAudio(itemJSON,
                 progressCallback,
                 (FileInputStream fileInputStream, String url) -> {
                     if (fileInputStream == null) {
@@ -1131,7 +1141,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
                         //update progress to complete
                         //doesnt matter, download is complete successfully notify frontend
-                        progressCallback.updateProgress(1, 1, 0);
+                        progressCallback.updateProgress(1, 1, 0, ProgressCallback.Type.COMPLETE);
 
                         //set fully downloaded
                         audioJSON.progressTracker.setIsFullyDownloaded(true);

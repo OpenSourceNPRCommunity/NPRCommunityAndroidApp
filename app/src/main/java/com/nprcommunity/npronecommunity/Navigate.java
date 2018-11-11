@@ -41,6 +41,7 @@ import com.nprcommunity.npronecommunity.Layout.Fragment.ContentViewPagerFragment
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
 import java.util.List;
@@ -66,6 +67,9 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.SWAP_POS_ONE;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.SWAP_POS_TWO;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.METADATA_KEY_IMAGE_HREF;
+import static com.nprcommunity.npronecommunity.Store.ProgressCallback.*;
+import static com.nprcommunity.npronecommunity.Store.ProgressCallback.Type.*;
+import static com.nprcommunity.npronecommunity.Store.ProgressCallback.Type.ERROR;
 
 public class Navigate extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -567,52 +571,86 @@ public class Navigate extends AppCompatActivity
                 contentViewPagerFragmentHolder.updateTiles();
                 break;
             case MEDIA_DOWNLOADING_PROGRESS:
-                int[] downloadProgressInts = bundle.getIntArray(
-                        BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name()
-                );
+                if (contentQueueFragment != null) {
+                    View tmpView = contentQueueFragment.getView(
+                            bundle.getString(
+                                    BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name()
+                            )
+                    );
 
-                /*
-                 * [0] speed in nanoseconds
-                 * [1] percentage
-                 */
-                if (downloadProgressInts != null && downloadProgressInts.length == 2) {
-                    if (contentQueueFragment != null) {
-                        View tmpView = contentQueueFragment.getView(
-                                bundle.getString(
-                                        BackgroundAudioService.ActionExtras.MEDIA_PREPARED_HREF.name()
-                                )
+                    if (tmpView != null) {
+                        String tmpProgressType = bundle.getString(
+                                BackgroundAudioService.ActionExtras.MEDIA_DOWNLOADING_PROGRESS_TYPE.name(),
+                                ""
                         );
-
-                        if (tmpView != null) {
-                            if (downloadProgressInts[1] == 100) {
-                                //if percentage is 100
-                                String speed = Util.getBytesPerSecString(downloadProgressInts[0]);
-                                tmpView.findViewById(R.id.queue_progress_speed)
-                                        .setVisibility(View.GONE);
-                                String percent = getString(R.string.one_hundred_pecent_downloaded);
-                                ((TextView)tmpView.findViewById(R.id.queue_progress_percent)).setText(
-                                        percent
-                                );
-                                tmpView.findViewById(R.id.queue_progress_bar)
-                                        .setVisibility(View.GONE);
-                            } else {
+                        int speed = bundle.getInt(
+                                BackgroundAudioService.ActionExtras.MEDIA_DOWNLOADING_PROGRESS_SPEED.name(),
+                                0
+                        );
+                        int percentage = bundle.getInt(
+                                BackgroundAudioService.ActionExtras.MEDIA_DOWNLOADING_PROGRESS_PERCENTAGE.name(),
+                                0
+                        );
+                        String percent;
+                        TextView progressSpeed = null;
+                        TextView progressPercent = null;
+                        ProgressBar progressBar = null;
+                        switch (valueOf(tmpProgressType)) {
+                            case DOWNLOADING:
                                 //when downloading update these views
-                                String speed = Util.getBytesPerSecString(downloadProgressInts[0]);
-                                TextView progressSpeed = tmpView.findViewById(R.id.queue_progress_speed);
-                                progressSpeed.setText(
-                                        speed
-                                );
-                                progressSpeed.setVisibility(View.VISIBLE);
-                                String percent = downloadProgressInts[1] + "%";
-                                ((TextView)tmpView.findViewById(R.id.queue_progress_percent)).setText(
-                                        percent
-                                );
-                                ProgressBar progressBar = tmpView.findViewById(R.id.queue_progress_bar);
-                                progressBar.setProgress(
-                                        downloadProgressInts[1]
-                                );
-                                progressBar.setVisibility(View.VISIBLE);
-                            }
+                                progressSpeed = tmpView.findViewById(R.id.queue_progress_speed);
+                                if (progressSpeed != null) {
+                                    progressSpeed.setText(
+                                            Util.getBytesPerSecString(speed)
+                                    );
+                                    progressSpeed.setVisibility(View.VISIBLE);
+                                }
+                                progressPercent = tmpView.findViewById(R.id.queue_progress_percent);
+                                if (progressPercent != null) {
+                                    String tmpPerc = percentage + "%";
+                                    progressPercent.setText(tmpPerc);
+                                }
+                                progressBar = tmpView.findViewById(R.id.queue_progress_bar);
+                                if (progressBar != null) {
+                                    progressBar.setProgress(percentage);
+                                    progressBar.setVisibility(View.VISIBLE);
+                                }
+                                break;
+                            case WAITING_FOR_INTERNET:
+                                progressSpeed = tmpView.findViewById(R.id.queue_progress_speed);
+                                if (progressSpeed != null) {
+                                    progressSpeed.setText(
+                                            Util.getBytesPerSecString(speed)
+                                    );
+                                    progressSpeed.setVisibility(View.VISIBLE);
+                                }
+                                progressPercent = tmpView.findViewById(R.id.queue_progress_percent);
+                                if (progressPercent != null) {
+                                    progressPercent.setText(getString(R.string.waiting_for_internet));
+                                }
+                                break;
+                            case COMPLETE:
+                                progressSpeed = tmpView.findViewById(R.id.queue_progress_speed);
+                                if (progressSpeed != null) {
+                                    progressSpeed.setVisibility(View.GONE);
+                                }
+                                progressPercent = tmpView.findViewById(R.id.queue_progress_percent);
+                                if (progressPercent != null) {
+                                    progressPercent.setText(
+                                            getString(R.string.one_hundred_pecent_downloaded)
+                                    );
+                                }
+                                tmpView.findViewById(R.id.queue_progress_bar).setVisibility(View.GONE);
+                                break;
+                            case ERROR:
+                                progressPercent = tmpView.findViewById(R.id.queue_progress_percent);
+                                if (progressPercent != null) {
+                                    progressPercent.setText(getString(R.string.error_title));
+                                }
+                                break;
+                            default:
+                                Log.w(TAG, "updateAction: unknown action [" + tmpProgressType + "]");
+                                break;
                         }
                     }
                 }

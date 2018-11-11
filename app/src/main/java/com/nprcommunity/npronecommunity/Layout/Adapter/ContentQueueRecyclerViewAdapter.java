@@ -20,6 +20,7 @@ import com.nprcommunity.npronecommunity.Layout.Callback.ItemTouchHelperListener;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment.OnListFragmentInteractionListener;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Util;
 
 public class ContentQueueRecyclerViewAdapter
@@ -75,11 +76,13 @@ public class ContentQueueRecyclerViewAdapter
                             });
                         }
                     },
-                    (int progress, int total, int speed) -> {
+                    (int progress, int total, int speed, ProgressCallback.Type type) -> {
                         Log.d(TAG, "nextMediaHelper: progress loading content queue image: "
                             + tmpQueueItem.links.getValidImage().href + " at "
                             + " progress [" + progress + "] total [" + total + "] "
-                            + " percent [" + ((double)progress)/((double)total));
+                            + " percent [" + ((double)progress)/((double)total)
+                            + " type [" + type.name() + "]"
+                        );
                     }
             );
         }

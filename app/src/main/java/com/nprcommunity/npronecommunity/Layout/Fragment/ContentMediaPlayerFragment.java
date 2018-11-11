@@ -20,6 +20,7 @@ import android.widget.TextView;
 import com.nprcommunity.npronecommunity.API.RatingSender;
 import com.nprcommunity.npronecommunity.R;
 import com.nprcommunity.npronecommunity.Store.FileCache;
+import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Util;
 
 public class ContentMediaPlayerFragment extends Fragment {
@@ -219,11 +220,13 @@ public class ContentMediaPlayerFragment extends Fragment {
                                 mediaPlayerImageView.setImageBitmap(bitmap);
                             }
                         },
-                        (int progress, int total, int speed) -> {
+                        (int progress, int total, int speed, ProgressCallback.Type type) -> {
                             Log.d(TAG, "setMediaPicture: progress loading image content player: "
                                     + hrefImage + " at "
                                     + " progress [" + progress + "] total [" + total + "] "
-                                    + " percent [" + ((double)progress)/((double)total));
+                                    + " percent [" + ((double)progress)/((double)total)
+                                    + " type [" + type.name() + "]"
+                            );
                         }
                 );
             }

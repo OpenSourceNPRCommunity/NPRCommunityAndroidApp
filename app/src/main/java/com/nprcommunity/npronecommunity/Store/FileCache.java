@@ -10,6 +10,8 @@ import android.support.annotation.NonNull;
 import android.util.Base64;
 import android.util.Log;
 
+import com.nprcommunity.npronecommunity.API.APIRecommendations;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -273,49 +275,50 @@ public class FileCache {
         }
     }
 
-    public void getAudio(String filename,
+    public void getAudio(APIRecommendations.ItemJSON itemJSON,
                          ProgressCallback progressCallback,
                          CacheResponseMedia cacheResponseMedia) {
         DownloadPoolExecutor downloadPoolExecutor = DownloadPoolExecutor.getInstance(
                 DownloadPoolExecutor.MediaType.AUDIO
         );
-        if (!downloadPoolExecutor.inQueue(filename)) {
+        APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
+        if (!downloadPoolExecutor.inQueue(audioJSON.href) && !audioJSON.progressTracker.isFullyDownloaded()) {
             DownloadMediaTask downloadMediaTask = new DownloadMediaTask(
                     context,
                     Type.AUDIO,
                     cacheResponseMedia,
-                    filename,
+                    audioJSON.href,
                     progressCallback
             );
             if (!downloadPoolExecutor.execute(
                     downloadMediaTask,
-                    filename,
+                    audioJSON.href,
                     DownloadPoolExecutor.MediaType.AUDIO
             )) {
                 Log.e(TAG, "getAudio: failed to add audio even though not in queue");
             }
         } else {
-            String path = getFilePath(filename, Type.AUDIO);
-            if (fileExists(filename, Type.AUDIO)) {
+            String path = getFilePath(audioJSON.href, Type.AUDIO);
+            if (fileExists(audioJSON.href, Type.AUDIO)) {
                 //The file exists load in the audio
                 FileLock fileLock = null;
                 try {
                     File file = new File(path);
                     FileInputStream in = new FileInputStream(file);
                     fileLock = in.getChannel().lock(0L, Long.MAX_VALUE, true);
-                    cacheResponseMedia.callback(in, filename);
+                    cacheResponseMedia.callback(in, audioJSON.href);
                 } catch (FileNotFoundException e) {
-                    Log.e(TAG, "getAudio: " + filename, e);
+                    Log.e(TAG, "getAudio: " + audioJSON.href, e);
                     cacheResponseMedia.callback(null, null);
                 } catch (IOException e) {
-                    Log.e(TAG, "getAudio: " + filename, e);
+                    Log.e(TAG, "getAudio: " + audioJSON.href, e);
                     cacheResponseMedia.callback(null, null);
                 } finally {
                     if (fileLock != null) {
                         try {
                             fileLock.release();
                         } catch (IOException e) {
-                            Log.e(TAG, "getAudio: " + filename, e);
+                            Log.e(TAG, "getAudio: " + audioJSON.href, e);
                             cacheResponseMedia.callback(null, null);
                         }
                     }
@@ -371,8 +374,7 @@ public class FileCache {
                                     InputStream inputStream,
                                     Type type,
                                     ProgressCallback progressCallback,
-                                    int total,
-                                    Boolean stopDownload) throws FileNotFoundException {
+                                    int total) throws FileNotFoundException {
         String path = getFilePath(filename, type);
         File file = new File(path);
         FileOutputStream outputStream;
@@ -382,17 +384,15 @@ public class FileCache {
             int count = 0;
             try {
                 fileLock = outputStream.getChannel().lock();
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[1024 * 10]; // read at 10 kb/s
                 int len;
                 int prevProgress = count;
                 long start = System.nanoTime();
                 long end;
-                while ((len = inputStream.read(buffer)) > -1) {
-                    if (stopDownload) {
-                        Log.d(TAG, "saveFile: stopDownload requested breaking");
-                        return null;
-                    }
-                    outputStream.write(buffer, 0, len);
+                int offset = (int) inputStream.skip(file.length());
+                while ((len = inputStream.read(buffer, offset, buffer.length)) > -1) {
+                    outputStream.write(buffer, offset, len);
+                    offset = 0;
                     count += len;
                     end = System.nanoTime();
                     if ((end-start)/MILLI_SECOND_IN_NANO >= MILLI_NOTIFY) {
@@ -400,16 +400,18 @@ public class FileCache {
                             progressCallback.updateProgress(
                                     count,
                                     total,
-                                    (count - prevProgress)*(1000/MILLI_NOTIFY)
+                                    (count - prevProgress)*(1000/MILLI_NOTIFY),
+                                    ProgressCallback.Type.DOWNLOADING
                             );
                         }
-                        start = end;
                         prevProgress = count;
+                        start = end;
+                        outputStream.flush();
                     }
                 }
                 //set finished to download
                 if (progressCallback != null) {
-                    progressCallback.updateProgress(total, total, 0);
+                    progressCallback.updateProgress(total, total, 0, ProgressCallback.Type.COMPLETE);
                 }
             } finally {
                 if (fileLock != null) {

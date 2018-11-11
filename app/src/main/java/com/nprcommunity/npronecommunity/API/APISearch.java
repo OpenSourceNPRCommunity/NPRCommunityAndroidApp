@@ -52,8 +52,8 @@ public class APISearch extends API {
     public void executeFunc(String jsonData, Boolean success) {
         super.executeFunc(jsonData, success);
         if(success) {
-            Moshi moshi = new Moshi.Builder().build();
-            //prepare stringssearchJSON
+            Moshi moshi = new Moshi.Builder().add(new APIRecommendations.AtomicIntegerAdapter()).build();
+            //prepare strings searchJSON
             try {
                 //TODO This is extremely messy, we will have to clean that
                 JSONObject itemsJsonObject = new JSONObject(jsonData);

@@ -154,7 +154,8 @@ public class Search extends AppCompatActivity
                 Search.this.findViewById(R.id.search_progress_bar).setVisibility(View.GONE);
                 Search.this.findViewById(R.id.search_list).setVisibility(View.VISIBLE);
             }
-        });
+        },
+                false);
     }
 
     @Override

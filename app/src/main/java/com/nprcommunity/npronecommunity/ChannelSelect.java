@@ -64,7 +64,8 @@ public class ChannelSelect extends AppCompatActivity {
                         )
                 );
             }
-        });
+        },
+                false);
 
         //setup save button
         Button button = (Button) findViewById(R.id.channel_select_save);

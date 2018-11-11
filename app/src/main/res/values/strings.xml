@@ -49,4 +49,5 @@
     <string name="share">Share</string>
     <string name="error_playing">Error playing media.</string>
     <string name="waiting_for_internet">Waiting for internet...</string>
+    <string name="error_download_generic">Error fetching data</string>
 </resources>

@@ -88,7 +88,8 @@ public class RecommendationsAdapter extends RecyclerView.Adapter<Recommendations
                             tileDialogFragment.show(activity.getFragmentManager(), "tiledialog");
                         }
                     }
-                });
+                },
+                false);
             } else {
                 //create dialog to add audio
                 TileDialogFragment tileDialogFragment = TileDialogFragment.newInstance(

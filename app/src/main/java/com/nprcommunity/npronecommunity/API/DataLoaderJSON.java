@@ -3,6 +3,7 @@ package com.nprcommunity.npronecommunity.API;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.IOException;
 
@@ -44,9 +45,7 @@ public class DataLoaderJSON extends AsyncTask<String, Void, Boolean> {
     }
 
     protected void onPostExecute(Boolean b) {
-        // TODO: check this.exception
-        // TODO: do something with the feed
         responseFunc.executeFunc(responseJSON, b);
-        apiDataResponse.executeFunc();
+        apiDataResponse.callback();
     }
 }

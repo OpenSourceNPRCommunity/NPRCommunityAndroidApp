@@ -39,6 +39,7 @@ public class APIRecommendations extends API {
 
     @Override
     public void executeFunc(String jsonData, Boolean success) {
+        super.executeFunc(jsonData, success);
         if(success) {
             Moshi moshi = new Moshi.Builder().add(new AtomicIntegerAdapter()).build();
             JsonAdapter<RecommendationsJSON> jsonAdapter = moshi.adapter(RecommendationsJSON.class);
@@ -55,7 +56,7 @@ public class APIRecommendations extends API {
                 JSONCache.putObject(URL, recommendationsCache);
                 data = recommendationsCache;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user", e);
+                Log.e(TAG, "callback: Error adapting json data to user", e);
             }
         }
     }

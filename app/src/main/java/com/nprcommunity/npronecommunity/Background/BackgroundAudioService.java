@@ -1257,7 +1257,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     loadingLineUp = false;
                 }
             };
-            recommendations.updateData(recommendationsApiDataResponse);
+            recommendations.updateData(recommendationsApiDataResponse, false);
         }
     }
 

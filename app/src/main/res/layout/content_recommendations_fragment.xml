@@ -5,22 +5,28 @@
     android:layout_height="match_parent"
     tools:context=".Layout.Fragment.ContentRecommendationsFragment"
     android:id="@+id/content_recommendations_fragment">
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="5">
-
-        <LinearLayout
-            xmlns:android="http://schemas.android.com/apk/res/android"
+        <android.support.v4.widget.SwipeRefreshLayout
+            android:id="@+id/recommendations_swipe"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:id="@+id/content_recommendations"
-            android:scrollbars="vertical">
+            android:layout_height="match_parent"
+            android:layout_weight="5">
 
-        </LinearLayout>
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
 
-    </ScrollView>
+                    <LinearLayout
+                        xmlns:android="http://schemas.android.com/apk/res/android"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:id="@+id/content_recommendations"
+                        android:scrollbars="vertical">
+
+                    </LinearLayout>
+
+                </ScrollView>
+
+        </android.support.v4.widget.SwipeRefreshLayout>
 
 </FrameLayout>

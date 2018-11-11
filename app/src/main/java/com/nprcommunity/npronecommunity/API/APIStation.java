@@ -34,6 +34,7 @@ public class APIStation extends API {
 
     @Override
     public void executeFunc(String jsonData, Boolean success) {
+        super.executeFunc(jsonData, success);
         if(success) {
             Moshi moshi = new Moshi.Builder().build();
             JsonAdapter<StationJSON> jsonAdapter = moshi.adapter(StationJSON.class);
@@ -42,7 +43,7 @@ public class APIStation extends API {
                 //Set data
                 data = stationJSON;
             } catch (IOException e) {
-                Log.e(TAG, "executeFunc: Error adapting json data to user", e);
+                Log.e(TAG, "callback: Error adapting json data to user", e);
             }
         }
     }

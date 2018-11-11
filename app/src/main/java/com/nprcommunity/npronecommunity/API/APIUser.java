@@ -27,6 +27,7 @@ public class APIUser extends API {
 
     @Override
     public void executeFunc(String jsonData, Boolean success) {
+        super.executeFunc(jsonData, success);
         if(success) {
             Moshi moshi = new Moshi.Builder().build();
             JsonAdapter<UserJSON> jsonAdapter = moshi.adapter(UserJSON.class);

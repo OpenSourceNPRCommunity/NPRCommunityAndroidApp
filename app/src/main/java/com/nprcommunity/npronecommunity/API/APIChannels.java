@@ -50,6 +50,7 @@ public class APIChannels extends API {
 
     @Override
     public void executeFunc(String jsonData, Boolean success) {
+        super.executeFunc(jsonData, success);
         if(success) {
             Moshi moshi = new Moshi.Builder().build();
             JsonAdapter<ChannelsJSON> jsonAdapter = moshi.adapter(ChannelsJSON.class);

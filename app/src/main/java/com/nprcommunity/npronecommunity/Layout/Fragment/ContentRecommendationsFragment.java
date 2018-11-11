@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -13,6 +15,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.nprcommunity.npronecommunity.API.APIDataResponse;
@@ -35,6 +38,7 @@ public class ContentRecommendationsFragment extends Fragment {
 
     private OnFragmentInteractionListener listener;
     private Observable tileObservable;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     public ContentRecommendationsFragment() {
         // Required empty public constructor
@@ -53,9 +57,9 @@ public class ContentRecommendationsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-
-        }
+//        if (getArguments() != null) {
+//
+//        }
     }
 
     @Override
@@ -71,12 +75,22 @@ public class ContentRecommendationsFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstancState) {
         APIChannels APIChannels = new APIChannels(getContext());
         APIDataResponse channelApiDataResponse = () -> {
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.setRefreshing(false);
+            }
+
             ChannelCache channelsData = APIChannels.getData();
             if(channelsData == null || channelsData.data == null) {
                 Log.e(TAG, "onCreate: APIChannels data is null");
-                //TODO put error up on screen
             } else {
                 Log.d(TAG, "onCreate: APIChannels got data!");
+
+                //Grabs the linear layout where the APIRecommendations are stored
+                LinearLayout navigateRootLayout = getActivity().findViewById(R.id.content_recommendations);
+                if (navigateRootLayout != null) {
+                    // remove any existing reviews
+                    navigateRootLayout.removeAllViews();
+                }
 
                 List<APIChannels.ItemJSON> channelItems = new ArrayList<>();
                 //TODO add check for channel and recommendations validation
@@ -99,7 +113,17 @@ public class ContentRecommendationsFragment extends Fragment {
                 }
             }
         };
-        APIChannels.updateData(channelApiDataResponse);
+
+        swipeRefreshLayout = getActivity().findViewById(R.id.recommendations_swipe);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setOnRefreshListener(() -> {
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(true);
+                }
+                APIChannels.updateData(channelApiDataResponse, true);
+            });
+        }
+        APIChannels.updateData(channelApiDataResponse, false);
     }
 
     private void initRecommendationRow(APIChannels.ItemJSON channelItem, Activity activity) {
@@ -143,7 +167,7 @@ public class ContentRecommendationsFragment extends Fragment {
                     recommendationsEmptyText.setText(emptyRecommendation);
                     recommendationsEmptyText.setVisibility(View.VISIBLE);
                 } else {
-                    //The rest inflates the other views of the row and sets upt he adapters.
+                    //The rest inflates the other views of the row and sets up the adapters.
                     LinearLayoutManager tmpLinearLayout = new LinearLayoutManager(activity,
                             LinearLayoutManager.HORIZONTAL,
                             false);
@@ -157,7 +181,7 @@ public class ContentRecommendationsFragment extends Fragment {
                 }
             }
         };
-        APIRecommendations.updateData(recommendationsApiDataResponse);
+        APIRecommendations.updateData(recommendationsApiDataResponse, false);
     }
 
     @Override

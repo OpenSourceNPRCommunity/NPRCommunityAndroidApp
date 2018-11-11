@@ -4,5 +4,5 @@ public interface APIDataResponse {
     /**
      * Execute function when Data is done downloading
      */
-    public void executeFunc();
+    public void callback();
 }

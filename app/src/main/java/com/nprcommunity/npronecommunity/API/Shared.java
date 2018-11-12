@@ -40,10 +40,6 @@ public class Shared {
                 total = -1;
         private boolean fullyDownloaded = false;
 
-        public boolean isPartiallyDownloaded() {
-            return progress >= 0 || total >= 0;
-        }
-
         public void setIsFullyDownloaded(boolean downloaded) {
             fullyDownloaded = downloaded;
         }

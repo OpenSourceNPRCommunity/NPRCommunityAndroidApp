@@ -282,7 +282,11 @@ public class FileCache {
                 DownloadPoolExecutor.MediaType.AUDIO
         );
         APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
-        if (!downloadPoolExecutor.inQueue(audioJSON.href) && !audioJSON.progressTracker.isFullyDownloaded()) {
+        if (downloadPoolExecutor.inQueue(audioJSON.href)) {
+            return;
+        }
+
+        if (!audioJSON.progressTracker.isFullyDownloaded()) {
             DownloadMediaTask downloadMediaTask = new DownloadMediaTask(
                     context,
                     Type.AUDIO,

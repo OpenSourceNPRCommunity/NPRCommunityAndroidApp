@@ -48,9 +48,9 @@ Overall Goals:
 - Testing - I need to add it 
 
 Immediate Goals:
-- Action button (button) and (action) for aggregation recommendations
 - (More option) for more podcast
 - Notifications listen for updates
+- Previous button Queue 
 
 ### Long Term not as important goals, but have been on my mind...
 

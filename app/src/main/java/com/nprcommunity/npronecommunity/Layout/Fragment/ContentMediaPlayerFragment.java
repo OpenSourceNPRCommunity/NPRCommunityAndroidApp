@@ -3,6 +3,7 @@ package com.nprcommunity.npronecommunity.Layout.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -39,6 +40,8 @@ public class ContentMediaPlayerFragment extends Fragment {
     private ImageView mediaPlayerImageView;
     private ImageButton mediaPlayerShare, mediaPlayThumbsUp;
     private boolean ratingSent = false;
+    private Button mediaPlayerActionButton;
+    private String actionButtonHref;
 
     public ContentMediaPlayerFragment() {}
 
@@ -112,6 +115,12 @@ public class ContentMediaPlayerFragment extends Fragment {
         mediaPlayerDesc = view.findViewById(R.id.media_player_description);
         mediaPlayerImageView = view.findViewById(R.id.media_player_image_view);
         mediaPlayerDateAndTime = view.findViewById(R.id.media_player_date_time);
+        mediaPlayerActionButton = view.findViewById(R.id.media_player_action_button);
+        mediaPlayerActionButton.setOnClickListener((v) -> {
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(actionButtonHref));
+            startActivity(i);
+        });
         updateMedia();
         return view;
     }
@@ -173,6 +182,18 @@ public class ContentMediaPlayerFragment extends Fragment {
             mediaPlayerSeekBar.setEnabled(false);
             mediaPlayerSeekBar.setMax(0);
         }
+
+        if (listener != null) {
+            actionButtonHref = listener.getActionButtonHref();
+        }
+
+        if (mediaPlayerActionButton != null) {
+            if (actionButtonHref == null || actionButtonHref.length() == 0) {
+                mediaPlayerActionButton.setVisibility(View.GONE);
+            } else {
+                mediaPlayerActionButton.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     public void updateMedia() {
@@ -228,6 +249,18 @@ public class ContentMediaPlayerFragment extends Fragment {
             mediaPlayerSeekBar.setMax(duration);
             mediaPlayerSeekBar.setProgress(progress);
         }
+
+        if (listener != null) {
+            actionButtonHref = listener.getActionButtonHref();
+        }
+
+        if (mediaPlayerActionButton != null) {
+            if (actionButtonHref == null || actionButtonHref.length() == 0) {
+                mediaPlayerActionButton.setVisibility(View.GONE);
+            } else {
+                mediaPlayerActionButton.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     private void setMediaPicture() {
@@ -236,7 +269,7 @@ public class ContentMediaPlayerFragment extends Fragment {
             FileCache fileCache = FileCache.getInstances(this.getContext());
             String hrefImage = listener.getMediaImage();
             //if the image is not a drawable (aka the media has its own image, then we load it)
-            if (hrefImage != null) {
+            if (hrefImage != null && hrefImage.length() > 0) {
                 fileCache.getImageAsync(
                         hrefImage,
                         (Bitmap bitmap) -> {
@@ -288,5 +321,6 @@ public class ContentMediaPlayerFragment extends Fragment {
         String getShareUrl();
         void sendRatingThumbsUp();
         String getAudioTitle();
+        String getActionButtonHref();
     }
 }

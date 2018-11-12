@@ -68,9 +68,19 @@
 
         </RelativeLayout>
 
+        <Button
+            android:id="@+id/media_player_action_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/media_player_button_area"
+            android:layout_centerHorizontal="true"
+            android:minHeight="30dp"
+            android:text="@string/media_player_click_here"
+            android:visibility="gone"
+            />
 
         <ScrollView
-            android:layout_below="@+id/media_player_button_area"
+            android:layout_below="@+id/media_player_action_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             >

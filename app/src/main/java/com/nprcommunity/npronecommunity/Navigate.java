@@ -37,20 +37,15 @@ import com.nprcommunity.npronecommunity.Background.Queue.LineUpQueue;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentPageAdapter;
 import com.nprcommunity.npronecommunity.Layout.Adapter.ContentQueueRecyclerViewAdapter;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentMediaPlayerFragment;
-import com.nprcommunity.npronecommunity.Layout.Fragment.ContentViewPagerFragmentHolder;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentQueueFragment;
 import com.nprcommunity.npronecommunity.Layout.Fragment.ContentRecommendationsFragment;
+import com.nprcommunity.npronecommunity.Layout.Fragment.ContentViewPagerFragmentHolder;
 import com.nprcommunity.npronecommunity.Store.FileCache;
-import com.nprcommunity.npronecommunity.Store.ProgressCallback;
 import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeUtils;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-
-import java.util.List;
 
 import static android.support.v4.media.session.PlaybackStateCompat.STATE_BUFFERING;
 import static android.support.v4.media.session.PlaybackStateCompat.STATE_CONNECTING;
@@ -72,10 +67,7 @@ import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.REMOVE_ITEM_OBJECT;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.SWAP_POS_ONE;
 import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.CommandCompatExtras.SWAP_POS_TWO;
-import static com.nprcommunity.npronecommunity.Background.BackgroundAudioService.METADATA_KEY_IMAGE_HREF;
-import static com.nprcommunity.npronecommunity.Store.ProgressCallback.*;
-import static com.nprcommunity.npronecommunity.Store.ProgressCallback.Type.*;
-import static com.nprcommunity.npronecommunity.Store.ProgressCallback.Type.ERROR;
+import static com.nprcommunity.npronecommunity.Store.ProgressCallback.Type.valueOf;
 
 public class Navigate extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -767,9 +759,18 @@ public class Navigate extends AppCompatActivity
 
     @Override
     public String getMediaImage() {
-        return mediaControllerCompat.getMetadata()
-                .getString(METADATA_KEY_IMAGE_HREF);
-
+        if (MediaQueueManager.getInstance(this).queueSize() > 0) {
+            Bundle bundle = MediaQueueManager.getInstance(this)
+                    .getQueueTrack(0).getDescription().getExtras();
+            if (bundle != null) {
+                APIRecommendations.ItemJSON itemJSON = ((APIRecommendations.ItemJSON)bundle
+                        .getSerializable(LineUpQueue.ApiItem.API_ITEM.name()));
+                if (itemJSON != null) {
+                    return itemJSON.links.getValidImage().href;
+                }
+            }
+        }
+        return "";
     }
 
     @Override
@@ -798,6 +799,22 @@ public class Navigate extends AppCompatActivity
     public String getAudioTitle() {
         return mediaControllerCompat.getMetadata()
                 .getString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE);
+    }
+
+    @Override
+    public String getActionButtonHref() {
+        if (MediaQueueManager.getInstance(this).queueSize() > 0) {
+            Bundle bundle = MediaQueueManager.getInstance(this)
+                    .getQueueTrack(0).getDescription().getExtras();
+            if (bundle != null) {
+                APIRecommendations.ItemJSON itemJSON = ((APIRecommendations.ItemJSON)bundle
+                        .getSerializable(LineUpQueue.ApiItem.API_ITEM.name()));
+                if (itemJSON != null && itemJSON.links.hasAction()) {
+                    return itemJSON.links.actions.get(0).href;
+                }
+            }
+        }
+        return "";
     }
 
     @Override

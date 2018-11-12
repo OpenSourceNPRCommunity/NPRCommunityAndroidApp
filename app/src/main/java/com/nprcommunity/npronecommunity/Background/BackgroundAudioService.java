@@ -48,10 +48,6 @@ import com.nprcommunity.npronecommunity.Store.SettingsAndTokenManager;
 import com.nprcommunity.npronecommunity.Util;
 import com.orhanobut.hawk.Hawk;
 
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.DateTimeFormatterBuilder;
-import org.joda.time.format.ISODateTimeFormat;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
@@ -79,7 +75,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         MediaPlayer.OnErrorListener,
         MediaPlayer.OnSeekCompleteListener {
 
-    public static final String METADATA_KEY_IMAGE_HREF = "METADATA_KEY_IMAGE_HREF";
     private MediaSessionCompat mediaSessionCompat;
     private final String TAG = "BACKGROUNDAUDIOSERVICE";
     private MediaPlayer mediaPlayer;
@@ -413,7 +408,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         float maxAudio = getVolume(MAX_AUDIO_LEVEL);
         mediaPlayer.setVolume(maxAudio, maxAudio);
 
-        //TODO: Might need a wifi lock as well
         fileCache = FileCache.getInstances(this);
         mediaQueueManager = MediaQueueManager.getInstance(this);
 
@@ -731,7 +725,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     currentMedia.attributes.description);
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DATE,
                     currentMedia.attributes.date);
-            metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, getMediaImage().href);
         } else {
             //Notification icon in card
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON,
@@ -763,7 +756,6 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "");
             metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION,
                     unknown);
-            metadataBuilder.putString(METADATA_KEY_IMAGE_HREF, null);
         }
 
         mediaSessionCompat.setMetadata(metadataBuilder.build());
@@ -1005,8 +997,9 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         } else if (mediaQueueManager.playMediaNow(queueItem)) {
             nextMediaHelper(true, false);
         } else {
-            Log.e(TAG, "playMediaNow: error adding new queue, look through logs");
-            //todo add toast or something
+            Log.e(TAG, "playMediaNow: error adding new queue, look through logs: [" +
+                index + "]");
+            Toast.makeText(this, R.string.error_play_now_generic, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1030,6 +1023,8 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                     mediaPlayer.stop();
                 }
             }
+
+            playMedia = prepareAndPlay;
 
             isPlaying = false;
 
@@ -1069,14 +1064,14 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
             if (currentMedia == null) {
                 Log.e(TAG, "nextMedia: failed to peek the next track");
             } else {
-                downloadAndPlayItem(currentMedia, prepareAndPlay);
+                downloadAndPlayItem(currentMedia);
             }
         } else {
             Log.d(TAG, "nextMedia: media player is null");
         }
     }
 
-    private void downloadAndPlayItem(APIRecommendations.ItemJSON itemJSON, boolean prepareAndPlay) {
+    private void downloadAndPlayItem(APIRecommendations.ItemJSON itemJSON) {
         APIRecommendations.AudioJSON audioJSON = itemJSON.links.getValidAudio();
         ProgressCallback progressCallback = (progress, total, speed, progressCallbackType) -> {
             //this is progress for audio loading
@@ -1154,20 +1149,14 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
 
                         //Reset the audio to be able to set to the new track
                         synchronized (lock) {
-                            mediaPlayer.reset();
                             //set the audio source
                             try {
-                                mediaPlayer.setDataSource(fileInputStream.getFD());
-                                if (prepareAndPlay) {
-                                    playMedia = true;
-                                    currentMedia = itemJSON;
+                                if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
                                     setMediaSessionMetadata();
                                     setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
-                                    mediaPlayer.prepareAsync();
-                                } else if (currentMedia != null && itemJSON.href.equals(currentMedia.href)) {
-                                    playMedia = false;
-                                    setMediaSessionMetadata();
-                                    setMediaPlaybackState(PlaybackState.STATE_BUFFERING);
+
+                                    mediaPlayer.reset();
+                                    mediaPlayer.setDataSource(fileInputStream.getFD());
                                     mediaPlayer.prepareAsync();
                                 }
                             } catch (IOException e) {
@@ -1214,7 +1203,7 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
                         BackgroundAudioService.Action.MEDIA_DOWNLOADING_PROGRESS.name(),
                         bundleMediaProgress
                 );
-                downloadAndPlayItem(itemJSON, false);
+                downloadAndPlayItem(itemJSON);
             }
         }
     }
@@ -1297,11 +1286,11 @@ public class BackgroundAudioService extends MediaBrowserServiceCompat implements
         }
 
         if (mediaQueueManager.queueSize() == 1) {
-            //adds prepare and play if list is empty
+            //sets as next media, does not play it
             nextMediaHelper(false, false);
         } else {
             //just starts download by adding to the end of the queue
-            downloadAndPlayItem(queueItem, false);
+            downloadAndPlayItem(queueItem);
         }
 
         Bundle bundleMediaAdd = new Bundle();

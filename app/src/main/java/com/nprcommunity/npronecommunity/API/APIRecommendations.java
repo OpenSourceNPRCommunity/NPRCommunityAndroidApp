@@ -246,6 +246,7 @@ public class APIRecommendations extends API {
         public List<UpJSON> up;
         public List<AttributesRecommendationsJSON> recommendations;
         public List<RatingsJSON> ratings;
+        public List<ActionJSON> actions;
 
         public boolean hasAudio() {
             return audio != null && audio.size() > 0;
@@ -282,6 +283,10 @@ public class APIRecommendations extends API {
 
         public boolean hasOnramp() {
             return onramps != null && onramps.size() > 0;
+        }
+
+        public boolean hasAction() {
+            return actions != null && actions.size() > 0;
         }
     }
 
@@ -330,6 +335,16 @@ public class APIRecommendations extends API {
      * ::NPR DOCUMENTATION::
      */
     public static class OnRampsJSON implements Serializable{
+        public String href;
+        public @Json(name="content-type") String content_type;
+    }
+
+    /**
+     * ::NPR DOCUMENTATION::
+     * One or more shareable links for the item
+     * ::NPR DOCUMENTATION::
+     */
+    public static class ActionJSON implements Serializable{
         public String href;
         public @Json(name="content-type") String content_type;
     }
